@@ -1,0 +1,158 @@
+Website Design Concept: Kawai Craft
+Overall Concept: Kawai Craft is a digital storefront designed to be a vibrant, joyful, and trustworthy hub for anime fans. The design philosophy merges the energetic aesthetic of modern Japanese pop culture with the clean, intuitive user experience of a top-tier e-commerce platform. The goal is to make finding and buying your next papercraft project as fun as building it.
+
+1. Design System & Brand Identity
+Logo: The name Kawai Craft in a rounded, bubbly font. The 'C' in 'Craft' is stylized to look like a pair of craft scissors or an origami fold. A small, cute mascot (like a happy paper crane or a chibi ninja holding a craft knife) could be part of the logo lockup.
+
+Color Palette:
+
+Primary: Soft Pastel Pink (#FFD1DC) and Serene Lavender (#E6E6FA). Used for backgrounds and large UI panels.
+
+Secondary: Muted Charcoal (#36454F) for primary text, ensuring readability.
+
+Accent: Electric Neon Cyan (#00FFFF) and Vibrant Magenta (#FF00FF). Used for call-to-action buttons, hover effects, and highlights to create a dynamic contrast.
+
+Typography:
+
+Headings: A playful but clear, rounded sans-serif font like Baloo 2 or Fredoka One. (e.g., <h1>Kawai Craft</h1>).
+
+Body Text: A clean, highly-readable sans-serif like Nunito or M PLUS Rounded 1c.
+
+Iconography: Custom-designed icons with a soft, rounded style. Icons for 'Cart', 'Search', 'User Profile', and social media will have a friendly, 'kawaii' feel.
+
+UI Elements:
+
+Buttons: Pill-shaped with soft drop shadows. Primary CTAs use a neon accent color with a subtle glow on hover.
+
+Cards: Product cards and panels have rounded corners and a gentle box-shadow to make them "float" above the subtle background.
+
+2. Page-by-Page Breakdown
+A. Homepage
+The homepage is designed to immediately immerse the user in the world of anime crafting.
+
+Navigation Bar (Sticky):
+
+Left: Kawai Craft Logo.
+
+Center: A prominent Search Bar with placeholder text like "Search for Naruto, Chainsaw Man...".
+
+Right: A dropdown 'Filter by Series' menu, a Cart icon (with a counter), and Login/Register buttons.
+
+Hero Section:
+
+Background: A dynamic, high-quality anime-style banner illustration. It shows a collage of several popular characters (like Tanjiro, Luffy, and Anya) in chibi form, happily assembling their own papercraft figures.
+
+Text Overlay:
+
+Site Title: <h1>Kawai Craft</h1> in large, stylized font.
+
+Tagline: <h2>Cut, Craft, Collect – Your Anime Figures Await</h2>
+
+Call-to-Action (CTA): A glowing, neon cyan button that says "Explore Catalogues".
+
+Featured Series Section:
+
+A horizontal scrolling section with logos of the most popular anime series (Demon Slayer, One Piece, Jujutsu Kaisen, etc.). Clicking a logo takes the user directly to that series' catalogue page.
+
+Product Grid Section (e.g., "New Arrivals" or "Fan Favorites"):
+
+Displays a grid of 8-12 of the latest or most popular PDF catalogues.
+
+Product Card Design:
+
+Image: A crisp preview of the catalogue's cover art.
+
+Title: Name of the character/catalogue (e.g., "Gojo Satoru - Infinity Form").
+
+Series Tag: A small, colorful tag indicating the anime (e.g., "Jujutsu Kaisen").
+
+Price: Clearly displayed (e.g., $4.99).
+
+Add to Cart Button: A simple '+' icon or a small button that, on click, provides a satisfying animation and updates the cart counter in the navigation bar.
+
+How It Works Section:
+
+A simple, visual three-step guide using cute icons:
+
+Choose Your Hero: Icon of a manga panel.
+
+Instant Download: Icon of a cloud with a download arrow.
+
+Cut, Craft, Collect: Icon of scissors and a completed figure.
+
+B. Product Catalogue Page
+This is the main shopping area.
+
+Sidebar/Top Filter Bar:
+
+Filter by Anime Series: Checkboxes for all available series.
+
+Sort By: Dropdown for "Popularity," "Newest," "Price: Low to High," "Price: High to Low."
+
+Main Content:
+
+An expansive grid of product cards, identical in design to the homepage grid.
+
+Supports infinite scroll or pagination to load more products.
+
+C. Checkout Flow
+Designed to be as frictionless as possible.
+
+Shopping Cart (Modal or Page):
+
+A clean list of added items with thumbnail, title, and price.
+
+Ability to adjust quantity or remove items.
+
+A clear display of the subtotal.
+
+A prominent, secure-looking "Proceed to Checkout" button.
+
+Checkout Page:
+
+A single-page layout.
+
+User provides an email address (for sending the download link).
+
+Payment integration (e.g., Stripe or PayPal) is embedded directly on the page.
+
+The total is clearly displayed and updates if any promo codes are applied.
+
+Confirmation & Download Page:
+
+A large, friendly "Thank You for Your Order!" message.
+
+Instant Access: A prominent section with large download buttons for each PDF purchased. For example: [Download Now: Naruto - Sage Mode PDF].
+
+A confirmation message stating, "A download link has also been sent to your email."
+
+3. Extra Touches & Animations
+Subtle Backgrounds: The main content area has a very low-opacity, repeating pattern of cherry blossoms, shuriken, or pixel stars, which doesn't distract from the products.
+
+Hover Animations:
+
+On product cards, the cover image scales up by 5% (transform: scale(1.05)).
+
+A soft, neon glow matching the site's accent color appears around the border of the hovered card.
+
+Buttons and links have smooth color transitions.
+
+Mobile-First Responsive Design:
+
+Mobile: The layout is a single column. The product grid shows 1 or 2 items per row. The navigation bar collapses into a "hamburger" menu.
+
+Tablet: The grid expands to 2-3 columns.
+
+Desktop: The full experience with 4-5 columns in the product grid and a visible navigation bar.
+
+Footer:
+
+A clean, three-column layout.
+
+Column 1: Kawai Craft logo and a brief sentence about the site's mission.
+
+Column 2: Quick Links (Home, All Catalogues, FAQ, Contact Us).
+
+Column 3: Social media icons (Instagram, Twitter, TikTok, Pinterest) stylized to match the site's theme.
+
+A simple copyright notice at the bottom: © 2025 Kawai Craft. All Rights Reserved.
