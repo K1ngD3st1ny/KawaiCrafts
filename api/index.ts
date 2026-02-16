@@ -1,3 +1,3 @@
-export default async (req: any, res: any) => {
-    res.status(200).json({ message: "Deployment Unblocked Check", timestamp: Date.now() });
-};
+import app from "../server/index";
+
+export default app;

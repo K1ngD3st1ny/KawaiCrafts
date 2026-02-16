@@ -1,16 +1,9 @@
 {
     "version": 2,
-    "functions": {
-        "api/index.ts": {}
-    },
     "rewrites": [
         {
-            "source": "/api/(.*)",
-            "destination": "/api/index"
-        },
-        {
             "source": "/(.*)",
-            "destination": "/index.html"
+            "destination": "/api/index"
         }
     ]
 }

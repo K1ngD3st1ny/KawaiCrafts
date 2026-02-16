@@ -76,10 +76,10 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // app.use(express.static(distPath));
+  app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
-    res.status(200).send("DEBUG: FALLBACK HANDLER REACHED - If you see this, I am in control.");
+    res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
