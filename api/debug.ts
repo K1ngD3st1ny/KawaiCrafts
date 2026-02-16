@@ -26,10 +26,21 @@ export default function handler(req, res) {
         serverIndexContent = `Error reading file: ${e.message}`;
     }
 
+    let packageJsonContent = '';
+    const packageJsonPath = path.resolve(cwd, 'package.json');
+    try {
+        if (fs.existsSync(packageJsonPath)) {
+            packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+        }
+    } catch (e) {
+        packageJsonContent = `Error reading file: ${e.message}`;
+    }
+
     const distServerPath = path.resolve(cwd, 'dist-server');
     const listing = {
         env: process.env.NODE_ENV,
         cwd,
+        packageJson: packageJsonContent,
         distPath,
         distServerPath,
         filesInCwd: fs.readdirSync(cwd),
