@@ -1,9 +1,7 @@
 {
     "version": 2,
     "functions": {
-        "api/index.ts": {
-            "includeFiles": "dist-server/**"
-        }
+        "api/index.ts": {}
     },
     "rewrites": [
         {
