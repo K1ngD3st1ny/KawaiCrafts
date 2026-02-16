@@ -82,7 +82,12 @@ export function serveStatic(app: Express) {
   app.use("*", (_req, res) => {
     const indexPath = path.resolve(distPath, "index.html");
     if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath);
+      try {
+        const content = fs.readFileSync(indexPath, "utf-8");
+        res.status(200).set({ "Content-Type": "text/html" }).send(content);
+      } catch (e: any) {
+        res.status(500).type("text/plain").send(`Error reading index.html: ${e.message}`);
+      }
     } else {
       res.status(200).type("text/plain").send(`
         Error: Could not find index.html
