@@ -26,16 +26,15 @@ export default function handler(req, res) {
         serverIndexContent = `Error reading file: ${e.message}`;
     }
 
+    const distServerPath = path.resolve(cwd, 'dist-server');
     const listing = {
         env: process.env.NODE_ENV,
         cwd,
         distPath,
-        publicPath,
+        distServerPath,
         filesInCwd: fs.readdirSync(cwd),
-        distExists: fs.existsSync(distPath),
-        publicExists: fs.existsSync(publicPath),
         filesInDist: fs.existsSync(distPath) ? fs.readdirSync(distPath) : [],
-        filesInPublic: fs.existsSync(publicPath) ? fs.readdirSync(publicPath) : [],
+        filesInDistServer: fs.existsSync(distServerPath) ? fs.readdirSync(distServerPath) : [],
         indexHtmlPreview: indexHtmlContent,
         serverIndexPreview: serverIndexContent
     };
