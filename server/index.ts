@@ -83,9 +83,12 @@ if (!process.env.VERCEL) {
 
 // Export for Vercel
 export default async (req: any, res: any) => {
-  await init();
-  // We can't use app(req, res) directly if app is an express app, it should work?
-  // Express app is a function: (req, res, next) => ...
-  // But on Vercel we want to pass the request to the express app.
+  const appInstance = await init();
+  // Vercel serverless function expects a function (req, res) => void or Promise<void>
+  // Express app is that function. 
+  // However, init returns the HTTP server if we look at registerRoutes, OR it returns app?
+  // registerRoutes returns httpServer. 
+  // We need the APP, not the server, for Vercel. 
+  // app is available in scope.
   app(req, res);
 };
