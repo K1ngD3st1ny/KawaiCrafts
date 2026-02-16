@@ -16,7 +16,7 @@ export default function Hero({ onExploreClick }: HeroProps) {
   return (
     <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
       {/* Background Image with Overlay */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${heroImage})` }}
       >
@@ -25,13 +25,13 @@ export default function Hero({ onExploreClick }: HeroProps) {
 
       {/* Content */}
       <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-        <h1 
+        <h1
           className="text-5xl md:text-7xl font-heading font-bold text-white mb-6 drop-shadow-lg"
           data-testid="hero-title"
         >
           Kawai Craft
         </h1>
-        <h2 
+        <h2
           className="text-xl md:text-3xl font-heading font-medium text-white/90 mb-8 drop-shadow-md"
           data-testid="hero-tagline"
         >
@@ -39,8 +39,9 @@ export default function Hero({ onExploreClick }: HeroProps) {
         </h2>
         <Button
           size="lg"
+          variant="accent"
           onClick={handleExploreClick}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-4 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          className="font-bold text-lg px-8 py-6 rounded-full"
           data-testid="button-explore-catalogues"
         >
           Explore Catalogues

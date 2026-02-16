@@ -36,8 +36,17 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
+// ... imports kept (implicit in 'replace_file_content' context if not modifying, but here we replace the block)
+// Actually I need to be careful with imports. I will preserve them by starting replacement after imports if possible.
+// But the IIFE starts at line 39.
+
+// I will replace the wrapper.
+
+let server: any = null;
+
+const init = async () => {
+  if (server) return server;
+  server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -56,14 +65,27 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  const host = process.env.NODE_ENV === 'development' ? 'localhost' : '0.0.0.0';
-  
-  server.listen(port, host, () => {
-    log(`serving on ${host}:${port}`);
-  });
-})();
+  return server;
+};
+
+// Auto-start if not running on Vercel (or similar serverless environment)
+if (!process.env.VERCEL) {
+  (async () => {
+    const server = await init();
+    const port = parseInt(process.env.PORT || '5000', 10);
+    const host = process.env.NODE_ENV === 'development' ? 'localhost' : '0.0.0.0';
+
+    server.listen(port, host, () => {
+      log(`serving on ${host}:${port}`);
+    });
+  })();
+}
+
+// Export for Vercel
+export default async (req: any, res: any) => {
+  await init();
+  // We can't use app(req, res) directly if app is an express app, it should work?
+  // Express app is a function: (req, res, next) => ...
+  // But on Vercel we want to pass the request to the express app.
+  app(req, res);
+};

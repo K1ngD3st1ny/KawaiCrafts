@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,53 +16,61 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
+  /* Soft Pastel Pink Background */
   --background: 330 100% 96%;
-
+  
+  /* Muted Charcoal Foreground */
   --foreground: 200 22% 25%;
 
-  --border: 0 0% 88%;
+  --border: 330 20% 90%;
 
-  --card: 240 67% 97%;
+  /* White/Light Pink Card */
+  --card: 0 0% 100%;
 
   --card-foreground: 200 22% 25%;
 
-  --card-border: 0 0% 90%;
+  --card-border: 330 20% 92%;
 
-  --sidebar: 330 100% 94%;
+  /* Serene Lavender Sidebar */
+  --sidebar: 240 67% 96%;
 
   --sidebar-foreground: 200 22% 25%;
 
-  --sidebar-border: 0 0% 88%;
+  --sidebar-border: 240 20% 90%;
 
-  --sidebar-primary: 180 100% 50%;
+  /* Pink Primary in Sidebar */
+  --sidebar-primary: 330 100% 91%;
 
-  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-primary-foreground: 200 22% 25%;
 
-  --sidebar-accent: 300 100% 85%;
+  --sidebar-accent: 240 67% 92%;
 
   --sidebar-accent-foreground: 200 22% 25%;
 
   --sidebar-ring: 180 100% 50%;
 
-  --popover: 0 0% 92%;
+  --popover: 0 0% 100%;
 
   --popover-foreground: 200 22% 25%;
 
-  --popover-border: 0 0% 86%;
+  --popover-border: 330 20% 90%;
 
-  --primary: 180 100% 50%;
+  /* Soft Pastel Pink Primary */
+  --primary: 330 100% 91%;
 
-  --primary-foreground: 0 0% 98%;
+  --primary-foreground: 200 22% 25%; /* Dark text on light pink */
 
-  --secondary: 0 0% 86%;
+  /* Serene Lavender Secondary */
+  --secondary: 240 67% 94%;
 
   --secondary-foreground: 200 22% 25%;
 
-  --muted: 240 30% 92%;
+  --muted: 240 20% 96%;
 
-  --muted-foreground: 200 22% 45%;
+  --muted-foreground: 200 10% 45%;
 
-  --accent: 300 100% 50%;
+  /* Electric Neon Cyan Accent */
+  --accent: 180 100% 50%;
 
   --accent-foreground: 200 22% 25%;
 
@@ -68,18 +78,21 @@
 
   --destructive-foreground: 0 0% 98%;
 
-  --input: 0 0% 80%;
-  --ring: 180 100% 50%;
+  --input: 330 20% 90%;
+  
+  /* Vibrant Magenta Ring/Focus */
+  --ring: 300 100% 50%;
+  
   --chart-1: 330 100% 65%;
   --chart-2: 240 67% 70%;
   --chart-3: 180 100% 35%;
   --chart-4: 300 100% 65%;
   --chart-5: 200 22% 35%;
 
-  --font-sans: Nunito, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: Menlo, monospace;
-  --radius: .5rem; /* 8px */
+  --font-sans: "Nunito", sans-serif;
+  --font-heading: "Baloo 2", sans-serif;
+  
+  --radius: 1rem; /* More rounded for Kawai look */
   --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.02);
   --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.03);
   --shadow-sm: 0px 2px 0px 0px hsl(0 0% 0% / 0.04), 0px 1px 2px -1px hsl(0 0% 0% / 0.06);

@@ -6,9 +6,9 @@ export default {
   theme: {
     extend: {
       borderRadius: {
-        lg: ".5625rem", /* 9px */
-        md: ".375rem", /* 6px */
-        sm: ".1875rem", /* 3px */
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       colors: {
         // Flat / base colors (regular buttons)
@@ -83,10 +83,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["var(--font-sans)"],
-        serif: ["var(--font-serif)"],
-        mono: ["var(--font-mono)"],
-        heading: ["Baloo 2", "system-ui", "sans-serif"],
+        sans: ["Nunito", "sans-serif"],
+        heading: ["Baloo 2", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {
