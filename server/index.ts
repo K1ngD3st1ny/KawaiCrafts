@@ -83,12 +83,12 @@ if (!process.env.VERCEL) {
 
 // Export for Vercel
 export default async (req: any, res: any) => {
-  const appInstance = await init();
-  // Vercel serverless function expects a function (req, res) => void or Promise<void>
-  // Express app is that function. 
-  // However, init returns the HTTP server if we look at registerRoutes, OR it returns app?
-  // registerRoutes returns httpServer. 
-  // We need the APP, not the server, for Vercel. 
-  // app is available in scope.
-  app(req, res);
+  try {
+    await init();
+    app(req, res);
+  } catch (e: any) {
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "text/plain");
+    res.end(`Internal Server Error: ${e.message}\nStack: ${e.stack}`);
+  }
 };
