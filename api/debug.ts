@@ -38,6 +38,7 @@ export default function handler(req, res) {
 
     const distServerPath = path.resolve(cwd, 'dist-server');
     const listing = {
+        timestamp: Date.now(),
         env: process.env.NODE_ENV,
         cwd,
         packageJson: packageJsonContent,
