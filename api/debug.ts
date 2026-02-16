@@ -16,15 +16,28 @@ export default function handler(req, res) {
         indexHtmlContent = `Error reading file: ${e.message}`;
     }
 
+    let serverIndexContent = '';
+    const serverIndexPath = path.resolve(distPath, 'index.js');
+    try {
+        if (fs.existsSync(serverIndexPath)) {
+            serverIndexContent = fs.readFileSync(serverIndexPath, 'utf-8').substring(0, 500);
+        }
+    } catch (e) {
+        serverIndexContent = `Error reading file: ${e.message}`;
+    }
+
     const listing = {
         env: process.env.NODE_ENV,
         cwd,
+        distPath,
+        publicPath,
         filesInCwd: fs.readdirSync(cwd),
         distExists: fs.existsSync(distPath),
         publicExists: fs.existsSync(publicPath),
         filesInDist: fs.existsSync(distPath) ? fs.readdirSync(distPath) : [],
         filesInPublic: fs.existsSync(publicPath) ? fs.readdirSync(publicPath) : [],
-        indexHtmlPreview: indexHtmlContent
+        indexHtmlPreview: indexHtmlContent,
+        serverIndexPreview: serverIndexContent
     };
 
     res.status(200).json(listing);
