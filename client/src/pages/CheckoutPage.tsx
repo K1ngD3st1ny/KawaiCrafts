@@ -32,10 +32,22 @@ export default function CheckoutPage() {
     }, 2000);
   };
 
-  const handleDownload = (itemId: string) => {
-    console.log(`Downloading ${itemId}`);
-    // Simulate download
-    alert(`Downloading ${itemId} PDF...`);
+  const handleDownload = async (itemId: string) => {
+    try {
+      const response = await fetch(`/api/download/${itemId}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(`Download failed: ${data.error || "Unknown error"}`);
+        return;
+      }
+
+      // Open the signed URL to trigger download
+      window.open(data.downloadUrl, "_blank");
+    } catch (err) {
+      console.error("Download error:", err);
+      alert("Failed to download file. Please try again.");
+    }
   };
 
   if (isComplete) {
