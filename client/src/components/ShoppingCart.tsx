@@ -11,6 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useLocation } from "wouter";
 
 interface CartItem {
   id: string;
@@ -41,6 +42,7 @@ export default function ShoppingCart({
   trigger
 }: ShoppingCartProps) {
   const [processingItems, setProcessingItems] = useState<Set<string>>(new Set());
+  const [, setLocation] = useLocation();
 
   const handleQuantityChange = async (itemId: string, newQuantity: number) => {
     if (newQuantity < 0) return;
@@ -71,6 +73,10 @@ export default function ShoppingCart({
   };
 
   const handleCheckout = () => {
+    if (onClose) {
+      onClose();
+    }
+    setLocation("/checkout");
     if (onCheckout) {
       onCheckout();
     }

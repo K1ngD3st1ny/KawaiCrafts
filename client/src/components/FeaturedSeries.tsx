@@ -1,88 +1,113 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-interface SeriesItem {
-  id: string;
-  name: string;
-  color: string;
-  textColor: string;
-}
-
 interface FeaturedSeriesProps {
-  onSeriesClick?: (seriesId: string) => void;
+  seriesList?: string[];
+  onSeriesClick?: (seriesName: string) => void;
 }
 
-export default function FeaturedSeries({ onSeriesClick }: FeaturedSeriesProps) {
-  //todo: remove mock functionality
-  const featuredSeries: SeriesItem[] = [
-    { id: "demon-slayer", name: "Demon Slayer", color: "bg-gradient-to-r from-red-500 to-orange-500", textColor: "text-white" },
-    { id: "one-piece", name: "One Piece", color: "bg-gradient-to-r from-blue-500 to-cyan-500", textColor: "text-white" },
-    { id: "jujutsu-kaisen", name: "Jujutsu Kaisen", color: "bg-gradient-to-r from-purple-500 to-pink-500", textColor: "text-white" },
-    { id: "naruto", name: "Naruto", color: "bg-gradient-to-r from-orange-500 to-yellow-500", textColor: "text-white" },
-    { id: "attack-on-titan", name: "Attack on Titan", color: "bg-gradient-to-r from-gray-600 to-gray-800", textColor: "text-white" },
-    { id: "dragon-ball", name: "Dragon Ball", color: "bg-gradient-to-r from-yellow-400 to-orange-400", textColor: "text-black" },
-    { id: "my-hero-academia", name: "My Hero Academia", color: "bg-gradient-to-r from-green-500 to-emerald-500", textColor: "text-white" },
-    { id: "chainsaw-man", name: "Chainsaw Man", color: "bg-gradient-to-r from-red-600 to-red-800", textColor: "text-white" },
-  ];
+// Color map for known anime series
+const seriesStyles: Record<string, { color: string; textColor: string }> = {
+  "Demon Slayer": { color: "bg-gradient-to-r from-red-500 to-orange-500", textColor: "text-white" },
+  "One Piece": { color: "bg-gradient-to-r from-blue-500 to-cyan-500", textColor: "text-white" },
+  "Jujutsu Kaisen": { color: "bg-gradient-to-r from-purple-500 to-pink-500", textColor: "text-white" },
+  "Naruto": { color: "bg-gradient-to-r from-orange-500 to-yellow-500", textColor: "text-white" },
+  "Attack on Titan": { color: "bg-gradient-to-r from-gray-600 to-gray-800", textColor: "text-white" },
+  "Dragon Ball": { color: "bg-gradient-to-r from-yellow-400 to-orange-400", textColor: "text-black" },
+  "My Hero Academia": { color: "bg-gradient-to-r from-green-500 to-emerald-500", textColor: "text-white" },
+  "Chainsaw Man": { color: "bg-gradient-to-r from-red-600 to-red-800", textColor: "text-white" },
+};
 
-  const handleSeriesClick = (seriesId: string) => {
+const defaultStyle = {
+  color: "bg-gradient-to-r from-indigo-500 to-purple-500",
+  textColor: "text-white",
+};
+
+// Fallback series list used when no products exist in the DB yet
+const fallbackSeries = [
+  "Demon Slayer", "One Piece", "Jujutsu Kaisen", "Naruto",
+  "Attack on Titan", "Dragon Ball", "My Hero Academia", "Chainsaw Man",
+];
+
+export default function FeaturedSeries({
+  seriesList,
+  onSeriesClick,
+}: FeaturedSeriesProps) {
+  const displaySeries = seriesList && seriesList.length > 0 ? seriesList : fallbackSeries;
+
+  const handleSeriesClick = (seriesName: string) => {
     if (onSeriesClick) {
-      onSeriesClick(seriesId);
+      onSeriesClick(seriesName);
     }
-    console.log(`Series clicked: ${seriesId}`);
+    console.log(`Series clicked: ${seriesName}`);
   };
 
   return (
     <section className="py-12 px-4">
       <div className="container mx-auto">
-        <h2 
+        <h2
           className="text-3xl font-heading font-bold text-center mb-8"
           data-testid="section-title-featured-series"
         >
           Featured Anime Series
         </h2>
-        
+
         <div className="relative">
           {/* Horizontal Scrolling Container */}
-          <div 
+          <div
             className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            {featuredSeries.map((series) => (
-              <Card
-                key={series.id}
-                className="flex-shrink-0 w-48 h-28 overflow-hidden cursor-pointer group transition-all duration-300 hover:shadow-lg hover-elevate"
-                onClick={() => handleSeriesClick(series.id)}
-                data-testid={`card-series-${series.id}`}
-              >
-                <CardContent className="p-0 h-full">
-                  <div className={`h-full flex items-center justify-center ${series.color} ${series.textColor} transition-transform duration-300 group-hover:scale-105`}>
-                    <h3 
-                      className="text-lg font-heading font-bold text-center px-4 drop-shadow-sm"
-                      data-testid={`text-series-${series.id}`}
+            {displaySeries.map((series) => {
+              const style = seriesStyles[series] || defaultStyle;
+              const id = series.toLowerCase().replace(/\s+/g, "-");
+
+              return (
+                <Card
+                  key={series}
+                  className="flex-shrink-0 w-48 h-28 overflow-hidden cursor-pointer group transition-all duration-300 hover:shadow-lg hover-elevate"
+                  onClick={() => handleSeriesClick(series)}
+                  data-testid={`card-series-${id}`}
+                >
+                  <CardContent className="p-0 h-full">
+                    <div
+                      className={`h-full flex items-center justify-center ${style.color} ${style.textColor} transition-transform duration-300 group-hover:scale-105`}
                     >
-                      {series.name}
-                    </h3>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      <h3
+                        className="text-lg font-heading font-bold text-center px-4 drop-shadow-sm"
+                        data-testid={`text-series-${id}`}
+                      >
+                        {series}
+                      </h3>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           {/* Scroll Indicators */}
           <div className="flex justify-center mt-4 gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => document.querySelector('.overflow-x-auto')?.scrollBy({ left: -200, behavior: 'smooth' })}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                document
+                  .querySelector(".overflow-x-auto")
+                  ?.scrollBy({ left: -200, behavior: "smooth" })
+              }
               data-testid="button-scroll-left"
             >
               ← Previous
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => document.querySelector('.overflow-x-auto')?.scrollBy({ left: 200, behavior: 'smooth' })}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                document
+                  .querySelector(".overflow-x-auto")
+                  ?.scrollBy({ left: 200, behavior: "smooth" })
+              }
               data-testid="button-scroll-right"
             >
               Next →

@@ -1,18 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Download, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function CheckoutPage() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
-  //todo: remove mock functionality
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setLocation("/login");
+    }
+  }, [isAuthenticated, authLoading, setLocation]);
+
+  //todo: replace with actual cart items from context/state
   const mockCartItems = [
     { id: "gojo-infinity", title: "Gojo Satoru - Infinity Form", price: 4.99 },
     { id: "nezuko-chibi", title: "Nezuko - Chibi Form", price: 3.99 },
@@ -34,7 +42,9 @@ export default function CheckoutPage() {
 
   const handleDownload = async (itemId: string) => {
     try {
-      const response = await fetch(`/api/download/${itemId}`);
+      const response = await fetch(`/api/download/${itemId}`, {
+        credentials: "include",
+      });
       const data = await response.json();
 
       if (!response.ok) {

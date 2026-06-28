@@ -1,7 +1,12 @@
-import { useState } from "react";
 import ProductCard from "./ProductCard";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -20,50 +25,48 @@ interface ProductGridProps {
   onAddToCart?: (productId: string) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  seriesList?: string[];
+  selectedSeries?: string;
+  sortBy?: string;
+  onSortChange?: (sort: string) => void;
+  onSeriesFilter?: (series: string) => void;
 }
 
-export default function ProductGrid({ 
-  products, 
-  onAddToCart, 
-  onLoadMore, 
-  hasMore = false 
+export default function ProductGrid({
+  products,
+  onAddToCart,
+  onLoadMore,
+  hasMore = false,
+  seriesList = [],
+  selectedSeries = "",
+  sortBy = "popularity",
+  onSortChange,
+  onSeriesFilter,
 }: ProductGridProps) {
-  const [selectedSeries, setSelectedSeries] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState("popularity");
-
-  const allSeries = Array.from(new Set(products.map(p => p.series))).sort();
-
-  const filteredAndSortedProducts = products
-    .filter(product => 
-      selectedSeries.length === 0 || selectedSeries.includes(product.series)
-    )
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "popularity":
-          return b.popularity - a.popularity;
-        case "newest":
-          return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
-        case "price-low":
-          return a.price - b.price;
-        case "price-high":
-          return b.price - a.price;
-        default:
-          return 0;
-      }
-    });
+  // Use provided series list from API, or extract from local products as fallback
+  const allSeries =
+    seriesList.length > 0
+      ? seriesList
+      : Array.from(new Set(products.map((p) => p.series))).sort();
 
   const handleSeriesToggle = (series: string, checked: boolean) => {
-    if (checked) {
-      setSelectedSeries(prev => [...prev, series]);
-    } else {
-      setSelectedSeries(prev => prev.filter(s => s !== series));
+    if (onSeriesFilter) {
+      onSeriesFilter(checked ? series : "");
     }
     console.log(`Series filter toggled: ${series} - ${checked}`);
   };
 
   const handleSortChange = (value: string) => {
-    setSortBy(value);
+    if (onSortChange) {
+      onSortChange(value);
+    }
     console.log(`Sort changed to: ${value}`);
+  };
+
+  const handleClearFilters = () => {
+    if (onSeriesFilter) {
+      onSeriesFilter("");
+    }
   };
 
   return (
@@ -79,15 +82,22 @@ export default function ProductGrid({
                   <CardTitle className="text-lg">Sort By</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Select value={sortBy} onValueChange={handleSortChange}>
+                  <Select
+                    value={sortBy}
+                    onValueChange={handleSortChange}
+                  >
                     <SelectTrigger data-testid="select-sort">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="popularity">Popularity</SelectItem>
                       <SelectItem value="newest">Newest</SelectItem>
-                      <SelectItem value="price-low">Price: Low to High</SelectItem>
-                      <SelectItem value="price-high">Price: High to Low</SelectItem>
+                      <SelectItem value="price-low">
+                        Price: Low to High
+                      </SelectItem>
+                      <SelectItem value="price-high">
+                        Price: High to Low
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </CardContent>
@@ -101,11 +111,14 @@ export default function ProductGrid({
                 <CardContent>
                   <div className="space-y-3">
                     {allSeries.map((series) => (
-                      <div key={series} className="flex items-center space-x-2">
+                      <div
+                        key={series}
+                        className="flex items-center space-x-2"
+                      >
                         <Checkbox
                           id={series}
-                          checked={selectedSeries.includes(series)}
-                          onCheckedChange={(checked) => 
+                          checked={selectedSeries === series}
+                          onCheckedChange={(checked) =>
                             handleSeriesToggle(series, checked as boolean)
                           }
                           data-testid={`checkbox-series-${series.toLowerCase().replace(/\s+/g, "-")}`}
@@ -119,12 +132,12 @@ export default function ProductGrid({
                       </div>
                     ))}
                   </div>
-                  
-                  {selectedSeries.length > 0 && (
+
+                  {selectedSeries && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setSelectedSeries([])}
+                      onClick={handleClearFilters}
                       className="w-full mt-4"
                       data-testid="button-clear-filters"
                     >
@@ -140,32 +153,34 @@ export default function ProductGrid({
           <main className="flex-1">
             {/* Results Header */}
             <div className="flex items-center justify-between mb-6">
-              <h2 
+              <h2
                 className="text-2xl font-heading font-bold"
                 data-testid="text-results-title"
               >
-                {selectedSeries.length > 0 
-                  ? `${selectedSeries.join(", ")} Papercraft` 
-                  : "All Papercraft"
-                }
+                {selectedSeries
+                  ? `${selectedSeries} Papercraft`
+                  : "All Papercraft"}
               </h2>
-              <span 
+              <span
                 className="text-muted-foreground"
                 data-testid="text-results-count"
               >
-                {filteredAndSortedProducts.length} results
+                {products.length} results
               </span>
             </div>
 
             {/* Products Grid */}
-            {filteredAndSortedProducts.length === 0 ? (
+            {products.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4" data-testid="text-no-results">
+                <p
+                  className="text-muted-foreground mb-4"
+                  data-testid="text-no-results"
+                >
                   No products found matching your filters
                 </p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setSelectedSeries([])}
+                <Button
+                  variant="outline"
+                  onClick={handleClearFilters}
                   data-testid="button-reset-filters"
                 >
                   Reset Filters
@@ -173,11 +188,11 @@ export default function ProductGrid({
               </div>
             ) : (
               <>
-                <div 
+                <div
                   className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8"
                   data-testid="grid-products"
                 >
-                  {filteredAndSortedProducts.map((product) => (
+                  {products.map((product) => (
                     <ProductCard
                       key={product.id}
                       {...product}
@@ -189,7 +204,7 @@ export default function ProductGrid({
                 {/* Load More */}
                 {hasMore && onLoadMore && (
                   <div className="text-center">
-                    <Button 
+                    <Button
                       onClick={onLoadMore}
                       size="lg"
                       variant="outline"

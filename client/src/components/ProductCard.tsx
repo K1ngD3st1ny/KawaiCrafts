@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, ShoppingCart } from "lucide-react";
+import { Plus, ShoppingCart, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,10 @@ export default function ProductCard({
       "One Piece": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
       "Jujutsu Kaisen": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
       "Naruto": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+      "Attack on Titan": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+      "Dragon Ball": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+      "My Hero Academia": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      "Chainsaw Man": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
     };
     return colors[series] || "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
   };
@@ -53,13 +57,19 @@ export default function ProductCard({
     >
       <CardContent className="p-0">
         {/* Image Container */}
-        <div className="relative aspect-[3/4] overflow-hidden">
-          <img
-            src={imageUrl}
-            alt={title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            data-testid={`img-product-${id}`}
-          />
+        <div className="relative aspect-[3/4] overflow-hidden bg-muted">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              data-testid={`img-product-${id}`}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Package className="w-16 h-16 text-muted-foreground" />
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           
           {/* Quick Add Button */}

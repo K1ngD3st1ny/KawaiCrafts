@@ -1,11 +1,14 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { ensureBuckets } from "./supabase";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -37,16 +40,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// ... imports kept (implicit in 'replace_file_content' context if not modifying, but here we replace the block)
-// Actually I need to be careful with imports. I will preserve them by starting replacement after imports if possible.
-// But the IIFE starts at line 39.
-
-// I will replace the wrapper.
-
 let server: any = null;
 
 const init = async () => {
   if (server) return server;
+
+  // Ensure Supabase storage buckets exist
+  await ensureBuckets();
+
   server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
