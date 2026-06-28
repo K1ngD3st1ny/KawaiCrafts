@@ -9,7 +9,7 @@ import {
   loginSchema,
 } from "@shared/schema";
 import { eq, desc, sql, and } from "drizzle-orm";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { requireAdmin, generateToken } from "../middleware/auth";
 import { productUpload } from "../middleware/upload";
 import { supabase, PRODUCT_BUCKET, THUMBNAIL_BUCKET } from "../supabase";
