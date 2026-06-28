@@ -2,8 +2,9 @@
   "version": 2,
   "buildCommand": "npm run build",
   "functions": {
-    "api/index.ts": {
-      "includeFiles": "server/**,shared/**"
+    "api/index.mjs": {
+      "memory": 256,
+      "maxDuration": 30
     }
   },
   "rewrites": [
@@ -13,7 +14,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/api/index"
+      "destination": "/api/index.mjs"
     }
   ]
 }
