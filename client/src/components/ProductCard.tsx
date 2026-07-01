@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatPrice } from "@/lib/currency";
 import { Plus, ShoppingCart, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -112,7 +113,7 @@ export default function ProductCard({
               className="text-xl font-bold text-primary"
               data-testid={`text-price-${id}`}
             >
-              ${price.toFixed(2)}
+              {formatPrice(price)}
             </span>
             
             <Button

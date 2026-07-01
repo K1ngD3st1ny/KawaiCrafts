@@ -8,6 +8,8 @@ import Footer from "@/components/Footer";
 import ShoppingCart from "@/components/ShoppingCart";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const PRODUCTS_PER_PAGE = 16;
+
 interface CartItem {
   id: string;
   title: string;
@@ -36,6 +38,14 @@ interface Product {
   updatedAt: string;
 }
 
+interface PaginationInfo {
+  page: number;
+  totalPages: number;
+  totalProducts: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 export default function HomePage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -45,6 +55,14 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSeries, setSelectedSeries] = useState("");
   const [sortBy, setSortBy] = useState("popularity");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    totalPages: 1,
+    totalProducts: 0,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
 
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
@@ -53,17 +71,26 @@ export default function HomePage() {
       if (searchQuery) params.set("search", searchQuery);
       if (selectedSeries) params.set("series", selectedSeries);
       if (sortBy) params.set("sort", sortBy);
+      params.set("page", String(currentPage));
+      params.set("limit", String(PRODUCTS_PER_PAGE));
 
       const res = await fetch(`/api/products?${params.toString()}`);
       const data = await res.json();
       setProducts(data.products || []);
       setSeriesList(data.series || []);
+      setPagination({
+        page: data.page ?? 1,
+        totalPages: data.totalPages ?? 1,
+        totalProducts: data.totalProducts ?? 0,
+        hasNextPage: data.hasNextPage ?? false,
+        hasPreviousPage: data.hasPreviousPage ?? false,
+      });
     } catch (err) {
       console.error("Failed to fetch products:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, selectedSeries, sortBy]);
+  }, [searchQuery, selectedSeries, sortBy, currentPage]);
 
   useEffect(() => {
     fetchProducts();
@@ -141,6 +168,7 @@ export default function HomePage() {
 
   const handleSeriesClick = (seriesName: string) => {
     setSelectedSeries(seriesName);
+    setCurrentPage(1);
     const productsSection = document.querySelector(
       '[data-testid="grid-products"]'
     );
@@ -151,14 +179,28 @@ export default function HomePage() {
 
   const handleSearchSubmit = (query: string) => {
     setSearchQuery(query);
+    setCurrentPage(1);
   };
 
   const handleSortChange = (sort: string) => {
     setSortBy(sort);
+    setCurrentPage(1);
   };
 
   const handleSeriesFilter = (series: string) => {
     setSelectedSeries(series);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top of grid when page changes
+    const productsSection = document.querySelector(
+      '[data-testid="grid-products"]'
+    );
+    if (productsSection) {
+      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   const handleCheckout = () => {
@@ -207,12 +249,17 @@ export default function HomePage() {
           <ProductGrid
             products={mappedProducts}
             onAddToCart={handleAddToCart}
-            hasMore={false}
             seriesList={seriesList}
             selectedSeries={selectedSeries}
             sortBy={sortBy}
             onSortChange={handleSortChange}
             onSeriesFilter={handleSeriesFilter}
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            totalProducts={pagination.totalProducts}
+            hasNextPage={pagination.hasNextPage}
+            hasPreviousPage={pagination.hasPreviousPage}
+            onPageChange={handlePageChange}
           />
         )}
 

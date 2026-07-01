@@ -362,16 +362,16 @@ export default function AdminProductForm() {
 
                 <div className="space-y-2">
                   <Label htmlFor="product-price">
-                    Price ($) <span className="text-destructive">*</span>
+                    Price (₹) <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="product-price"
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder="4.99"
+                    placeholder="499"
                     required
                   />
                 </div>

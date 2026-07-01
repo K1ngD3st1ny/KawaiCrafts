@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatPrice } from "@/lib/currency";
 import { Minus, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,10 +180,10 @@ export default function ShoppingCart({
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-semibold" data-testid={`text-item-total-${item.id}`}>
-                            ${(item.price * item.quantity).toFixed(2)}
+                            {formatPrice(item.price * item.quantity)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            ${item.price.toFixed(2)} each
+                            {formatPrice(item.price)} each
                           </p>
                         </div>
                       </div>
@@ -201,7 +202,7 @@ export default function ShoppingCart({
           <div className="flex justify-between items-center">
             <span className="text-lg font-semibold">Subtotal:</span>
             <span className="text-2xl font-bold text-primary" data-testid="text-subtotal">
-              ${subtotal.toFixed(2)}
+              {formatPrice(subtotal)}
             </span>
           </div>
           

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Product {
   id: string;
@@ -23,25 +24,34 @@ interface Product {
 interface ProductGridProps {
   products: Product[];
   onAddToCart?: (productId: string) => void;
-  onLoadMore?: () => void;
-  hasMore?: boolean;
   seriesList?: string[];
   selectedSeries?: string;
   sortBy?: string;
   onSortChange?: (sort: string) => void;
   onSeriesFilter?: (series: string) => void;
+  // Pagination props
+  currentPage?: number;
+  totalPages?: number;
+  totalProducts?: number;
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
+  onPageChange?: (page: number) => void;
 }
 
 export default function ProductGrid({
   products,
   onAddToCart,
-  onLoadMore,
-  hasMore = false,
   seriesList = [],
   selectedSeries = "",
   sortBy = "popularity",
   onSortChange,
   onSeriesFilter,
+  currentPage = 1,
+  totalPages = 1,
+  totalProducts = 0,
+  hasNextPage = false,
+  hasPreviousPage = false,
+  onPageChange,
 }: ProductGridProps) {
   // Use provided series list from API, or extract from local products as fallback
   const allSeries =
@@ -66,6 +76,18 @@ export default function ProductGrid({
   const handleClearFilters = () => {
     if (onSeriesFilter) {
       onSeriesFilter("");
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (hasPreviousPage && onPageChange) {
+      onPageChange(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (hasNextPage && onPageChange) {
+      onPageChange(currentPage + 1);
     }
   };
 
@@ -165,7 +187,7 @@ export default function ProductGrid({
                 className="text-muted-foreground"
                 data-testid="text-results-count"
               >
-                {products.length} results
+                {totalProducts} {totalProducts === 1 ? "result" : "results"}
               </span>
             </div>
 
@@ -201,16 +223,48 @@ export default function ProductGrid({
                   ))}
                 </div>
 
-                {/* Load More */}
-                {hasMore && onLoadMore && (
-                  <div className="text-center">
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div
+                    className="flex items-center justify-center gap-4 pt-4 pb-2"
+                    data-testid="pagination-controls"
+                  >
                     <Button
-                      onClick={onLoadMore}
-                      size="lg"
                       variant="outline"
-                      data-testid="button-load-more"
+                      size="sm"
+                      onClick={handlePreviousPage}
+                      disabled={!hasPreviousPage}
+                      className="gap-1"
+                      data-testid="button-previous-page"
                     >
-                      Load More Products
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="hidden sm:inline">Previous</span>
+                    </Button>
+
+                    <span
+                      className="text-sm font-medium text-muted-foreground select-none"
+                      data-testid="text-page-info"
+                    >
+                      Page{" "}
+                      <span className="text-foreground font-semibold">
+                        {currentPage}
+                      </span>{" "}
+                      of{" "}
+                      <span className="text-foreground font-semibold">
+                        {totalPages}
+                      </span>
+                    </span>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextPage}
+                      disabled={!hasNextPage}
+                      className="gap-1"
+                      data-testid="button-next-page"
+                    >
+                      <span className="hidden sm:inline">Next</span>
+                      <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 )}

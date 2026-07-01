@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatPrice } from "@/lib/currency";
 import { ArrowLeft, Download, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +23,8 @@ export default function CheckoutPage() {
 
   //todo: replace with actual cart items from context/state
   const mockCartItems = [
-    { id: "gojo-infinity", title: "Gojo Satoru - Infinity Form", price: 4.99 },
-    { id: "nezuko-chibi", title: "Nezuko - Chibi Form", price: 3.99 },
+    { id: "gojo-infinity", title: "Gojo Satoru - Infinity Form", price: 499 },
+    { id: "nezuko-chibi", title: "Nezuko - Chibi Form", price: 399 },
   ];
 
   const subtotal = mockCartItems.reduce((sum, item) => sum + item.price, 0);
@@ -139,14 +140,14 @@ export default function CheckoutPage() {
                 {mockCartItems.map((item) => (
                   <div key={item.id} className="flex justify-between items-center py-2">
                     <span className="font-medium">{item.title}</span>
-                    <span className="font-semibold">${item.price.toFixed(2)}</span>
+                    <span className="font-semibold">{formatPrice(item.price)}</span>
                   </div>
                 ))}
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center text-lg font-bold">
                     <span>Total:</span>
                     <span className="text-primary" data-testid="text-checkout-total">
-                      ${subtotal.toFixed(2)}
+                      {formatPrice(subtotal)}
                     </span>
                   </div>
                 </div>
@@ -205,7 +206,7 @@ export default function CheckoutPage() {
                     </>
                   ) : (
                     <>
-                      Complete Purchase - ${subtotal.toFixed(2)}
+                      Complete Purchase - {formatPrice(subtotal)}
                     </>
                   )}
                 </Button>

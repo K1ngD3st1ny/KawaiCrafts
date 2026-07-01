@@ -3,7 +3,8 @@ import AdminLayout from "./AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, Users, ShoppingCart, DollarSign } from "lucide-react";
+import { Package, Users, ShoppingCart, IndianRupee } from "lucide-react";
+import { formatPrice } from "@/lib/currency";
 
 interface DashboardStats {
   totalProducts: number;
@@ -62,8 +63,8 @@ export default function AdminDashboard() {
     },
     {
       title: "Revenue",
-      value: `$${(stats?.revenue ?? 0).toFixed(2)}`,
-      icon: DollarSign,
+      value: formatPrice(stats?.revenue ?? 0),
+      icon: IndianRupee,
       color: "text-purple-500",
       bg: "bg-purple-500/10",
     },
@@ -160,7 +161,7 @@ export default function AdminDashboard() {
                           {product.animeSeries}
                         </td>
                         <td className="py-3 text-sm font-medium">
-                          ${parseFloat(product.price).toFixed(2)}
+                          {formatPrice(parseFloat(product.price))}
                         </td>
                         <td className="py-3">
                           <Badge

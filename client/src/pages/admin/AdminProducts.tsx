@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatPrice } from "@/lib/currency";
 import { useLocation } from "wouter";
 import AdminLayout from "./AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -161,8 +162,7 @@ export default function AdminProducts() {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {product.animeSeries} · {product.characterName} · $
-                        {parseFloat(product.price).toFixed(2)}
+                        {product.animeSeries} · {product.characterName} · {formatPrice(parseFloat(product.price))}
                       </p>
                     </div>
 

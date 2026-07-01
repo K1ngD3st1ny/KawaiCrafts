@@ -10,7 +10,7 @@ export default function ProductGridExample() {
       id: "gojo-infinity",
       title: "Gojo Satoru - Infinity Form",
       series: "Jujutsu Kaisen",
-      price: 4.99,
+      price: 499,
       imageUrl: gojoImage,
       popularity: 95,
       releaseDate: "2024-01-15",
@@ -19,7 +19,7 @@ export default function ProductGridExample() {
       id: "nezuko-chibi",
       title: "Nezuko - Chibi Form",
       series: "Demon Slayer",
-      price: 3.99,
+      price: 399,
       imageUrl: nezukoImage,
       popularity: 88,
       releaseDate: "2024-01-10",
@@ -28,7 +28,7 @@ export default function ProductGridExample() {
       id: "luffy-gear5",
       title: "Luffy - Gear 5",
       series: "One Piece",
-      price: 5.99,
+      price: 599,
       imageUrl: luffyImage,
       popularity: 92,
       releaseDate: "2024-01-20",
@@ -38,7 +38,7 @@ export default function ProductGridExample() {
       id: "gojo-regular",
       title: "Gojo Satoru - Regular Form",
       series: "Jujutsu Kaisen",
-      price: 3.99,
+      price: 399,
       imageUrl: gojoImage,
       popularity: 85,
       releaseDate: "2024-01-05",
@@ -47,7 +47,7 @@ export default function ProductGridExample() {
       id: "tanjiro-water",
       title: "Tanjiro - Water Breathing",
       series: "Demon Slayer",
-      price: 4.49,
+      price: 449,
       imageUrl: nezukoImage, // Using as placeholder
       popularity: 90,
       releaseDate: "2024-01-12",
@@ -56,7 +56,7 @@ export default function ProductGridExample() {
       id: "zoro-swords",
       title: "Roronoa Zoro - Three Swords",
       series: "One Piece",
-      price: 5.49,
+      price: 549,
       imageUrl: luffyImage, // Using as placeholder
       popularity: 87,
       releaseDate: "2024-01-18",
@@ -67,8 +67,12 @@ export default function ProductGridExample() {
     <ProductGrid
       products={sampleProducts}
       onAddToCart={(id) => console.log(`Added product ${id} to cart`)}
-      onLoadMore={() => console.log('Load more triggered')}
-      hasMore={true}
+      currentPage={1}
+      totalPages={1}
+      totalProducts={sampleProducts.length}
+      hasNextPage={false}
+      hasPreviousPage={false}
+      onPageChange={(page) => console.log(`Navigate to page ${page}`)}
     />
   );
 }

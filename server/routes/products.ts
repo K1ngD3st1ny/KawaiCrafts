@@ -13,9 +13,13 @@ router.get("/", async (req: Request, res: Response) => {
       series,
       sort = "popularity",
       featured,
-      limit = "50",
-      offset = "0",
+      page = "1",
+      limit = "16",
     } = req.query as Record<string, string>;
+
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 16));
+    const offset = (pageNum - 1) * limitNum;
 
     // Build conditions array
     const conditions = [eq(products.active, true)];
@@ -62,14 +66,17 @@ router.get("/", async (req: Request, res: Response) => {
       .from(products)
       .where(and(...conditions))
       .orderBy(orderBy)
-      .limit(parseInt(limit))
-      .offset(parseInt(offset));
+      .limit(limitNum)
+      .offset(offset);
 
-    // Also get total count for pagination
+    // Get total count for pagination
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(products)
       .where(and(...conditions));
+
+    const totalProducts = count;
+    const totalPages = Math.ceil(totalProducts / limitNum);
 
     // Get distinct series for filter options
     const seriesList = await db
@@ -80,7 +87,12 @@ router.get("/", async (req: Request, res: Response) => {
 
     res.json({
       products: results,
-      total: count,
+      page: pageNum,
+      limit: limitNum,
+      totalProducts,
+      totalPages,
+      hasNextPage: pageNum < totalPages,
+      hasPreviousPage: pageNum > 1,
       series: seriesList.map((s) => s.animeSeries),
     });
   } catch (err: any) {
