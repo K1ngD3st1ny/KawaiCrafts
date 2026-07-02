@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface FeaturedSeriesProps {
@@ -43,7 +42,7 @@ export default function FeaturedSeries({
   };
 
   return (
-    <section className="py-12 px-4">
+    <section className="pt-12 pb-8 px-4">
       <div className="container mx-auto">
         <h2
           className="text-3xl font-heading font-bold text-center mb-8"
@@ -86,33 +85,7 @@ export default function FeaturedSeries({
             })}
           </div>
 
-          {/* Scroll Indicators */}
-          <div className="flex justify-center mt-4 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                document
-                  .querySelector(".overflow-x-auto")
-                  ?.scrollBy({ left: -200, behavior: "smooth" })
-              }
-              data-testid="button-scroll-left"
-            >
-              ← Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                document
-                  .querySelector(".overflow-x-auto")
-                  ?.scrollBy({ left: 200, behavior: "smooth" })
-              }
-              data-testid="button-scroll-right"
-            >
-              Next →
-            </Button>
-          </div>
+
         </div>
       </div>
     </section>
