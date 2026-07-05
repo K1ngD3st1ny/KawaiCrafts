@@ -22,11 +22,15 @@ export const PRODUCT_BUCKET = "product_pdfs";
 // The bucket name where product thumbnail images are stored
 export const THUMBNAIL_BUCKET = "product_thumbnails";
 
+// The bucket name where user profile images are stored (public)
+export const PROFILE_BUCKET = "profile_images";
+
 // Ensure required storage buckets exist (creates them if missing)
 export async function ensureBuckets() {
   const buckets = [
     { name: PRODUCT_BUCKET, public: false },
     { name: THUMBNAIL_BUCKET, public: true },
+    { name: PROFILE_BUCKET, public: true },
   ];
 
   for (const bucket of buckets) {

@@ -8,6 +8,7 @@ import HomePage from "@/pages/HomePage";
 import CheckoutPage from "@/pages/CheckoutPage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
+import ProfilePage from "@/pages/ProfilePage";
 import MyDownloadsPage from "@/pages/MyDownloadsPage";
 import MyOrdersPage from "@/pages/MyOrdersPage";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
@@ -26,6 +27,7 @@ function Router() {
 
       {/* Protected customer routes */}
       <Route path="/checkout" component={CheckoutPage} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/my-downloads" component={MyDownloadsPage} />
       <Route path="/my-orders" component={MyOrdersPage} />
 

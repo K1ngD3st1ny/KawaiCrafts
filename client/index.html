@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <script>
+      // Suppress harmless ResizeObserver errors caused by Radix UI Select in Vite dev mode
+      window.addEventListener('error', (e) => {
+        if (
+          e.message === 'ResizeObserver loop limit exceeded' ||
+          e.message === 'ResizeObserver loop completed with undelivered notifications.'
+        ) {
+          e.stopImmediatePropagation();
+        }
+      });
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>Kawai Craft - Anime Papercraft PDFs | Cut, Craft, Collect</title>

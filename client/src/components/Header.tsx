@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ShoppingCart, User, Menu, Scissors, Download, Package, LogOut, Shield } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, Scissors, Download, Package, LogOut, Shield, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 
@@ -127,6 +127,7 @@ export default function Header({ cartItemCount = 0, onCartClick, onSearchSubmit 
                     data-testid="button-user-menu"
                   >
                     <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.profileImageUrl || undefined} alt={user.name} />
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                         {getInitials(user.name)}
                       </AvatarFallback>
@@ -142,6 +143,13 @@ export default function Header({ cartItemCount = 0, onCartClick, onSearchSubmit 
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                   </div>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setLocation("/profile")}
+                    data-testid="menu-my-profile"
+                  >
+                    <UserCircle className="w-4 h-4 mr-2" />
+                    My Profile
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setLocation("/my-downloads")}
                     data-testid="menu-my-downloads"
@@ -245,6 +253,14 @@ export default function Header({ cartItemCount = 0, onCartClick, onSearchSubmit 
 
               {isAuthenticated && user ? (
                 <>
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => { setLocation("/profile"); setIsMobileMenuOpen(false); }}
+                  >
+                    <UserCircle className="h-5 w-5 mr-2" />
+                    My Profile
+                  </Button>
                   <Button
                     variant="ghost"
                     className="justify-start"

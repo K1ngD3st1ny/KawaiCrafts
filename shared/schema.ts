@@ -24,6 +24,17 @@ export const users = pgTable("users", {
   role: text("role", { enum: ["customer", "admin"] })
     .notNull()
     .default("customer"),
+  // ── Extended profile fields ──────────────────────────────────────────────
+  firstName: text("first_name"),
+  middleName: text("middle_name"),
+  lastName: text("last_name"),
+  displayName: text("display_name"),
+  dateOfBirth: text("date_of_birth"), // stored as YYYY-MM-DD string
+  gender: text("gender", { enum: ["male", "female", "non_binary", "prefer_not_to_say"] }),
+  phoneNumber: text("phone_number"),
+  alternatePhoneNumber: text("alternate_phone_number"),
+  profileImageUrl: text("profile_image_url"),
+  // ────────────────────────────────────────────────────────────────────────
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -52,8 +63,82 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1, "First name is required").max(50).optional(),
+  middleName: z.string().max(50).optional().nullable(),
+  lastName: z.string().min(1, "Last name is required").max(50).optional(),
+  displayName: z.string().max(50).optional().nullable(),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format").optional().nullable(),
+  gender: z.enum(["male", "female", "non_binary", "prefer_not_to_say"]).optional().nullable(),
+  phoneNumber: z.string().regex(/^[+]?[\d\s\-()]{7,15}$/, "Invalid phone number").optional().nullable(),
+  alternatePhoneNumber: z.string().regex(/^[+]?[\d\s\-()]{7,15}$/, "Invalid phone number").optional().nullable(),
+  name: z.string().min(2).max(100).optional(),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters").max(100),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// ─── Addresses ────────────────────────────────────────────────────────────────
+
+export const addresses = pgTable(
+  "addresses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    fullName: text("full_name").notNull(),
+    phoneNumber: text("phone_number").notNull(),
+    addressLine1: text("address_line1").notNull(),
+    addressLine2: text("address_line2"),
+    landmark: text("landmark"),
+    city: text("city").notNull(),
+    state: text("state").notNull(),
+    country: text("country").notNull().default("India"),
+    postalCode: text("postal_code").notNull(),
+    addressType: text("address_type", { enum: ["home", "work", "other"] })
+      .notNull()
+      .default("home"),
+    isDefaultShipping: boolean("is_default_shipping").notNull().default(false),
+    isDefaultBilling: boolean("is_default_billing").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("idx_addresses_user_id").on(table.userId),
+    index("idx_addresses_default_shipping").on(table.userId, table.isDefaultShipping),
+    index("idx_addresses_default_billing").on(table.userId, table.isDefaultBilling),
+  ]
+);
+
+export const insertAddressSchema = z.object({
+  fullName: z.string().min(2, "Full name is required").max(100),
+  phoneNumber: z.string().regex(/^[+]?[\d\s\-()]{7,15}$/, "Invalid phone number"),
+  addressLine1: z.string().min(5, "Address is required").max(200),
+  addressLine2: z.string().max(200).optional().nullable(),
+  landmark: z.string().max(100).optional().nullable(),
+  city: z.string().min(2, "City is required").max(100),
+  state: z.string().min(2, "State is required").max(100),
+  country: z.string().min(2, "Country is required").max(100).default("India"),
+  postalCode: z.string().regex(/^\d{4,10}$/, "Invalid postal code"),
+  addressType: z.enum(["home", "work", "other"]).default("home"),
+  isDefaultShipping: z.boolean().default(false),
+  isDefaultBilling: z.boolean().default(false),
+});
+
+export const updateAddressSchema = insertAddressSchema.partial();
+
+export type InsertAddress = z.infer<typeof insertAddressSchema>;
+export type Address = typeof addresses.$inferSelect;
+
 
 // ─── Products ────────────────────────────────────────────────────────────────
 

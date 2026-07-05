@@ -40,3 +40,19 @@ export const productUpload = upload.fields([
   { name: "thumbnail", maxCount: 1 },
   { name: "pdf", maxCount: 1 },
 ]);
+
+// Profile image upload — images only, 5 MB max
+const profileImageMulter = multer({
+  storage,
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PNG, JPG, and WebP images are allowed for profile pictures."));
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 }, // 5 MB
+});
+
+export const profileImageUpload = profileImageMulter.single("avatar");

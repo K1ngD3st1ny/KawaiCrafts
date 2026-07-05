@@ -13,6 +13,7 @@ interface User {
   name: string;
   email: string;
   role: "customer" | "admin";
+  profileImageUrl?: string | null;
   createdAt: string;
 }
 
