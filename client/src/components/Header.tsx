@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ShoppingCart, User, Menu, Scissors, Download, Package, LogOut, Shield, UserCircle } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, Scissors, Download, Package, LogOut, Shield, UserCircle, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useWishlist } from "@/hooks/useWishlist";
 import { useLocation } from "wouter";
 
 interface HeaderProps {
@@ -24,6 +25,7 @@ export default function Header({ cartItemCount = 0, onCartClick, onSearchSubmit 
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { data: wishlist = [] } = useWishlist();
   const [, setLocation] = useLocation();
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -97,6 +99,25 @@ export default function Header({ cartItemCount = 0, onCartClick, onSearchSubmit 
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Wishlist */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              onClick={() => setLocation("/wishlist")}
+              data-testid="button-wishlist"
+            >
+              <Heart className="h-5 w-5" />
+              {wishlist.length > 0 && (
+                <Badge 
+                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 hover:bg-red-600"
+                  data-testid="badge-wishlist-count"
+                >
+                  {wishlist.length}
+                </Badge>
+              )}
+            </Button>
 
             {/* Cart */}
             <Button
@@ -240,6 +261,15 @@ export default function Header({ cartItemCount = 0, onCartClick, onSearchSubmit 
             <div className="flex flex-col gap-2">
               <Button variant="outline" className="justify-start" data-testid="button-series-filter-mobile">
                 Filter by Series
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start relative"
+                onClick={() => { setLocation("/wishlist"); setIsMobileMenuOpen(false); }}
+                data-testid="button-wishlist-mobile"
+              >
+                <Heart className="h-5 w-5 mr-2" />
+                Wishlist ({wishlist.length})
               </Button>
               <Button
                 variant="ghost"

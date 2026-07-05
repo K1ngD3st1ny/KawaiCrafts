@@ -11,6 +11,7 @@ import RegisterPage from "@/pages/RegisterPage";
 import ProfilePage from "@/pages/ProfilePage";
 import MyDownloadsPage from "@/pages/MyDownloadsPage";
 import MyOrdersPage from "@/pages/MyOrdersPage";
+import WishlistPage from "@/pages/WishlistPage";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminProducts from "@/pages/admin/AdminProducts";
@@ -30,6 +31,8 @@ function Router() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/my-downloads" component={MyDownloadsPage} />
       <Route path="/my-orders" component={MyOrdersPage} />
+      <Route path="/wishlist" component={WishlistPage} />
+
 
       {/* Admin routes */}
       <Route path="/admin/login" component={AdminLoginPage} />

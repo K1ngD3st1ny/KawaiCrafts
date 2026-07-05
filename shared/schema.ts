@@ -9,6 +9,7 @@ import {
   boolean,
   uuid,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -275,3 +276,32 @@ export const insertDownloadSchema = createInsertSchema(downloads).omit({
 
 export type InsertDownload = z.infer<typeof insertDownloadSchema>;
 export type Download = typeof downloads.$inferSelect;
+
+// ─── Wishlists ───────────────────────────────────────────────────────────────
+
+export const wishlists = pgTable(
+  "wishlists",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_wishlists_user_id").on(table.userId),
+    index("idx_wishlists_product_id").on(table.productId),
+    uniqueIndex("idx_wishlists_user_product_unique").on(table.userId, table.productId),
+  ]
+);
+
+export const insertWishlistSchema = createInsertSchema(wishlists).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertWishlist = z.infer<typeof insertWishlistSchema>;
+export type Wishlist = typeof wishlists.$inferSelect;

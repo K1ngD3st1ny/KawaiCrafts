@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { formatPrice } from "@/lib/currency";
-import { Plus, ShoppingCart, Package } from "lucide-react";
+import { Plus, ShoppingCart, Package, Heart } from "lucide-react";
+import { motion } from "framer-motion";
+import { useWishlist, useWishlistMutations } from "@/hooks/useWishlist";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +25,17 @@ export default function ProductCard({
   onAddToCart 
 }: ProductCardProps) {
   const [isAdding, setIsAdding] = useState(false);
+  const { data: wishlist = [] } = useWishlist();
+  const { toggleWishlist, addToWishlist, removeFromWishlist } = useWishlistMutations();
+
+  const isWishlisted = wishlist.some((item) => item.productId === id);
+  const isWishlistLoading = addToWishlist.isPending || removeFromWishlist.isPending;
+
+  const handleWishlistClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(id, isWishlisted);
+  };
 
   const handleAddToCart = async () => {
     setIsAdding(true);
@@ -73,12 +86,32 @@ export default function ProductCard({
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           
+          {/* Wishlist Button */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleWishlistClick}
+            disabled={isWishlistLoading}
+            className={`absolute top-3 right-3 z-10 p-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-sm
+              ${
+                isWishlisted
+                  ? "bg-white/90 text-red-500 opacity-100"
+                  : "bg-black/20 text-white opacity-0 group-hover:opacity-100 hover:bg-black/40 dark:bg-black/40 dark:hover:bg-black/60"
+              }
+            `}
+            data-testid={`button-wishlist-${id}`}
+          >
+            <Heart 
+              className={`w-5 h-5 transition-all duration-300 ${isWishlisted ? "fill-current" : ""}`} 
+            />
+          </motion.button>
+
           {/* Quick Add Button */}
           <Button
             size="icon"
             onClick={handleAddToCart}
             disabled={isAdding}
-            className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-primary hover:bg-primary/90 rounded-full shadow-lg"
+            className="absolute top-3 right-14 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-primary hover:bg-primary/90 rounded-full shadow-lg z-10"
             data-testid={`button-quick-add-${id}`}
           >
             {isAdding ? (
