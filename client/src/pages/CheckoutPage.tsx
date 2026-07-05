@@ -1,19 +1,23 @@
 import { useState, useEffect } from "react";
 import { formatPrice } from "@/lib/currency";
-import { ArrowLeft, Download, CheckCircle } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/hooks/useCart";
 
 export default function CheckoutPage() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const cart = useCart();
   const [email, setEmail] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  // Snapshot of purchased items for the confirmation screen
+  const [purchasedItems, setPurchasedItems] = useState<{ id: string; title: string; price: number }[]>([]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -21,22 +25,22 @@ export default function CheckoutPage() {
     }
   }, [isAuthenticated, authLoading, setLocation]);
 
-  //todo: replace with actual cart items from context/state
-  const mockCartItems = [
-    { id: "gojo-infinity", title: "Gojo Satoru - Infinity Form", price: 499 },
-    { id: "nezuko-chibi", title: "Nezuko - Chibi Form", price: 399 },
-  ];
-
-  const subtotal = mockCartItems.reduce((sum, item) => sum + item.price, 0);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
     
+    // Snapshot items before clearing cart
+    setPurchasedItems(cart.cartItems.map((item) => ({
+      id: item.id,
+      title: item.title,
+      price: item.price * item.quantity,
+    })));
+
     // Simulate payment processing
     setTimeout(() => {
       setIsProcessing(false);
       setIsComplete(true);
+      cart.clearCart();
       console.log("Payment completed successfully");
     }, 2000);
   };
@@ -81,7 +85,7 @@ export default function CheckoutPage() {
 
             <div className="space-y-3">
               <h3 className="font-semibold">Instant Downloads:</h3>
-              {mockCartItems.map((item) => (
+              {purchasedItems.map((item) => (
                 <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <span className="font-medium">{item.title}</span>
                   <Button
@@ -112,6 +116,37 @@ export default function CheckoutPage() {
     );
   }
 
+  // Empty cart state
+  if (cart.cartItems.length === 0 && !isComplete) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <Button
+            variant="ghost"
+            onClick={() => setLocation("/")}
+            className="mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Shop
+          </Button>
+
+          <div className="text-center py-24 px-4 bg-muted/30 rounded-2xl border border-dashed">
+            <div className="bg-background w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+              <ShoppingCart className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-2xl font-semibold mb-2">Your cart is empty</h2>
+            <p className="text-muted-foreground max-w-md mx-auto mb-8">
+              Add some amazing papercraft to your cart before checking out!
+            </p>
+            <Button size="lg" onClick={() => setLocation("/")}>
+              Browse Products
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -137,17 +172,22 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockCartItems.map((item) => (
+                {cart.cartItems.map((item) => (
                   <div key={item.id} className="flex justify-between items-center py-2">
-                    <span className="font-medium">{item.title}</span>
-                    <span className="font-semibold">{formatPrice(item.price)}</span>
+                    <div>
+                      <span className="font-medium">{item.title}</span>
+                      {item.quantity > 1 && (
+                        <span className="text-sm text-muted-foreground ml-2">×{item.quantity}</span>
+                      )}
+                    </div>
+                    <span className="font-semibold">{formatPrice(item.price * item.quantity)}</span>
                   </div>
                 ))}
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center text-lg font-bold">
                     <span>Total:</span>
                     <span className="text-primary" data-testid="text-checkout-total">
-                      {formatPrice(subtotal)}
+                      {formatPrice(cart.subtotal)}
                     </span>
                   </div>
                 </div>
@@ -206,7 +246,7 @@ export default function CheckoutPage() {
                     </>
                   ) : (
                     <>
-                      Complete Purchase - {formatPrice(subtotal)}
+                      Complete Purchase - {formatPrice(cart.subtotal)}
                     </>
                   )}
                 </Button>

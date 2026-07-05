@@ -3,6 +3,8 @@ import { formatPrice } from "@/lib/currency";
 import { Plus, ShoppingCart, Package, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { useWishlist, useWishlistMutations } from "@/hooks/useWishlist";
+import { useCart } from "@/hooks/useCart";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +29,8 @@ export default function ProductCard({
   const [isAdding, setIsAdding] = useState(false);
   const { data: wishlist = [] } = useWishlist();
   const { toggleWishlist, addToWishlist, removeFromWishlist } = useWishlistMutations();
+  const cart = useCart();
+  const { toast } = useToast();
 
   const isWishlisted = wishlist.some((item) => item.productId === id);
   const isWishlistLoading = addToWishlist.isPending || removeFromWishlist.isPending;
@@ -37,17 +41,33 @@ export default function ProductCard({
     toggleWishlist(id, isWishlisted);
   };
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = () => {
+    if (isAdding) return; // Prevent duplicate clicks
+
     setIsAdding(true);
+
+    cart.addToCart({
+      id,
+      title,
+      series,
+      price,
+      imageUrl,
+    });
+
+    // Call optional parent callback for any extra side effects
     if (onAddToCart) {
       onAddToCart(id);
     }
-    console.log(`Added ${title} to cart`);
-    
-    // Simulate API call
+
+    toast({
+      title: "Added to cart",
+      description: `${title} has been added to your cart.`,
+    });
+
+    // Brief visual feedback then re-enable
     setTimeout(() => {
       setIsAdding(false);
-    }, 800);
+    }, 600);
   };
 
   const getSeriesColor = (series: string) => {

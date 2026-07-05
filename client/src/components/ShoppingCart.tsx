@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { formatPrice } from "@/lib/currency";
-import { Minus, Plus, Trash2, X } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
@@ -13,48 +13,34 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useLocation } from "wouter";
-
-interface CartItem {
-  id: string;
-  title: string;
-  series: string;
-  price: number;
-  quantity: number;
-  imageUrl: string;
-}
+import { useCart } from "@/hooks/useCart";
 
 interface ShoppingCartProps {
-  items: CartItem[];
   isOpen?: boolean;
   onClose?: () => void;
-  onUpdateQuantity?: (itemId: string, quantity: number) => void;
-  onRemoveItem?: (itemId: string) => void;
   onCheckout?: () => void;
   trigger?: React.ReactNode;
 }
 
 export default function ShoppingCart({
-  items,
   isOpen = false,
   onClose,
-  onUpdateQuantity,
-  onRemoveItem,
   onCheckout,
   trigger
 }: ShoppingCartProps) {
   const [processingItems, setProcessingItems] = useState<Set<string>>(new Set());
   const [, setLocation] = useLocation();
+  const cart = useCart();
 
-  const handleQuantityChange = async (itemId: string, newQuantity: number) => {
+  const handleQuantityChange = (itemId: string, newQuantity: number) => {
     if (newQuantity < 0) return;
     
     setProcessingItems(prev => new Set(Array.from(prev).concat(itemId)));
     
     if (newQuantity === 0) {
-      handleRemoveItem(itemId);
-    } else if (onUpdateQuantity) {
-      onUpdateQuantity(itemId, newQuantity);
-      console.log(`Updated ${itemId} quantity to ${newQuantity}`);
+      cart.removeFromCart(itemId);
+    } else {
+      cart.updateQuantity(itemId, newQuantity);
     }
     
     setTimeout(() => {
@@ -67,10 +53,7 @@ export default function ShoppingCart({
   };
 
   const handleRemoveItem = (itemId: string) => {
-    if (onRemoveItem) {
-      onRemoveItem(itemId);
-    }
-    console.log(`Removed item ${itemId} from cart`);
+    cart.removeFromCart(itemId);
   };
 
   const handleCheckout = () => {
@@ -81,10 +64,7 @@ export default function ShoppingCart({
     if (onCheckout) {
       onCheckout();
     }
-    console.log("Proceeding to checkout");
   };
-
-  const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const CartContent = () => (
     <div className="flex flex-col h-full">
@@ -92,7 +72,7 @@ export default function ShoppingCart({
         <SheetTitle className="flex items-center justify-between">
           Shopping Cart
           <Badge variant="secondary" data-testid="badge-cart-item-count">
-            {items.reduce((sum, item) => sum + item.quantity, 0)} items
+            {cart.totalItems} items
           </Badge>
         </SheetTitle>
         <SheetDescription>
@@ -101,7 +81,7 @@ export default function ShoppingCart({
       </SheetHeader>
 
       <div className="flex-1 overflow-auto py-6">
-        {items.length === 0 ? (
+        {cart.cartItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-center">
             <p className="text-muted-foreground mb-2" data-testid="text-empty-cart">
               Your cart is empty
@@ -112,7 +92,7 @@ export default function ShoppingCart({
           </div>
         ) : (
           <div className="space-y-4">
-            {items.map((item) => (
+            {cart.cartItems.map((item) => (
               <Card key={item.id} className="overflow-hidden" data-testid={`cart-item-${item.id}`}>
                 <CardContent className="p-4">
                   <div className="flex gap-4">
@@ -197,12 +177,12 @@ export default function ShoppingCart({
       </div>
 
       {/* Cart Footer */}
-      {items.length > 0 && (
+      {cart.cartItems.length > 0 && (
         <div className="border-t pt-6 space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-lg font-semibold">Subtotal:</span>
             <span className="text-2xl font-bold text-primary" data-testid="text-subtotal">
-              {formatPrice(subtotal)}
+              {formatPrice(cart.subtotal)}
             </span>
           </div>
           

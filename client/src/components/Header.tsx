@@ -12,21 +12,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useLocation } from "wouter";
 
 interface HeaderProps {
-  cartItemCount?: number;
   onCartClick?: () => void;
   onSearchSubmit?: (query: string) => void;
 }
 
-export default function Header({ cartItemCount = 0, onCartClick, onSearchSubmit }: HeaderProps) {
+export default function Header({ onCartClick, onSearchSubmit }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const cart = useCart();
   const { data: wishlist = [] } = useWishlist();
   const [, setLocation] = useLocation();
+
+  const handleCartClick = () => {
+    if (onCartClick) {
+      onCartClick();
+    } else {
+      cart.setIsCartOpen(true);
+    }
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,16 +133,16 @@ export default function Header({ cartItemCount = 0, onCartClick, onSearchSubmit 
               variant="ghost"
               size="icon"
               className="relative"
-              onClick={onCartClick}
+              onClick={handleCartClick}
               data-testid="button-cart"
             >
               <ShoppingCart className="h-5 w-5" />
-              {cartItemCount > 0 && (
+              {cart.totalItems > 0 && (
                 <Badge 
                   className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary"
                   data-testid="badge-cart-count"
                 >
-                  {cartItemCount}
+                  {cart.totalItems}
                 </Badge>
               )}
             </Button>
@@ -274,11 +283,11 @@ export default function Header({ cartItemCount = 0, onCartClick, onSearchSubmit 
               <Button
                 variant="ghost"
                 className="justify-start relative"
-                onClick={onCartClick}
+                onClick={handleCartClick}
                 data-testid="button-cart-mobile"
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
-                Cart ({cartItemCount})
+                Cart ({cart.totalItems})
               </Button>
 
               {isAuthenticated && user ? (

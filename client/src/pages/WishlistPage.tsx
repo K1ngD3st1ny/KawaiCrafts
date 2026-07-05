@@ -60,10 +60,6 @@ export default function WishlistPage() {
                 series={item.product.animeSeries}
                 price={Number(item.product.price)}
                 imageUrl={item.product.thumbnailUrl || ""}
-                onAddToCart={(id) => {
-                  console.log("Add to cart from wishlist", id);
-                  // Optionally handle cart logic here or in ProductCard
-                }}
               />
             ))}
           </div>

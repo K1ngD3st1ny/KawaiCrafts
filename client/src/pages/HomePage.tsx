@@ -6,18 +6,10 @@ import ProductGrid from "@/components/ProductGrid";
 import HowItWorks from "@/components/HowItWorks";
 import Footer from "@/components/Footer";
 import ShoppingCart from "@/components/ShoppingCart";
+import { useCart } from "@/hooks/useCart";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const PRODUCTS_PER_PAGE = 16;
-
-interface CartItem {
-  id: string;
-  title: string;
-  series: string;
-  price: number;
-  quantity: number;
-  imageUrl: string;
-}
 
 interface Product {
   id: string;
@@ -47,8 +39,7 @@ interface PaginationInfo {
 }
 
 export default function HomePage() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const cart = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [seriesList, setSeriesList] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -111,52 +102,6 @@ export default function HomePage() {
     slug: p.slug,
   }));
 
-  const handleAddToCart = (productId: string) => {
-    const product = products.find((p) => p.id === productId);
-    if (!product) return;
-
-    setCartItems((prev) => {
-      const existingItem = prev.find((item) => item.id === productId);
-      if (existingItem) {
-        return prev.map((item) =>
-          item.id === productId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
-        return [
-          ...prev,
-          {
-            id: product.id,
-            title: product.title,
-            series: product.animeSeries,
-            price: parseFloat(product.price),
-            quantity: 1,
-            imageUrl: product.thumbnailUrl || "",
-          },
-        ];
-      }
-    });
-
-    console.log(`Added ${product.title} to cart`);
-  };
-
-  const handleUpdateQuantity = (itemId: string, quantity: number) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId ? { ...item, quantity } : item
-      )
-    );
-  };
-
-  const handleRemoveItem = (itemId: string) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== itemId));
-  };
-
-  const handleCartOpen = () => {
-    setIsCartOpen(true);
-  };
-
   const handleExploreClick = () => {
     const productsSection = document.querySelector(
       '[data-testid="grid-products"]'
@@ -203,20 +148,10 @@ export default function HomePage() {
     }
   };
 
-  const handleCheckout = () => {
-    setIsCartOpen(false);
-  };
-
-  const totalCartItems = cartItems.reduce(
-    (sum, item) => sum + item.quantity,
-    0
-  );
-
   return (
     <div className="min-h-screen bg-background">
       <Header
-        cartItemCount={totalCartItems}
-        onCartClick={handleCartOpen}
+        onCartClick={() => cart.setIsCartOpen(true)}
         onSearchSubmit={handleSearchSubmit}
       />
 
@@ -248,7 +183,6 @@ export default function HomePage() {
         ) : (
           <ProductGrid
             products={mappedProducts}
-            onAddToCart={handleAddToCart}
             seriesList={seriesList}
             selectedSeries={selectedSeries}
             sortBy={sortBy}
@@ -269,12 +203,8 @@ export default function HomePage() {
       <Footer />
 
       <ShoppingCart
-        items={cartItems}
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        onUpdateQuantity={handleUpdateQuantity}
-        onRemoveItem={handleRemoveItem}
-        onCheckout={handleCheckout}
+        isOpen={cart.isCartOpen}
+        onClose={() => cart.setIsCartOpen(false)}
       />
     </div>
   );
