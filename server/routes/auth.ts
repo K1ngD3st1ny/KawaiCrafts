@@ -97,7 +97,10 @@ router.post("/login", async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    // Verify password
+    // Verify password (Google-only users have no password hash)
+    if (!user.passwordHash) {
+      return res.status(401).json({ error: "This account uses Google Sign-In. Please log in with Google." });
+    }
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       return res.status(401).json({ error: "Invalid email or password" });

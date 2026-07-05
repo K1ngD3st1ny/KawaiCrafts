@@ -19,7 +19,8 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  passwordHash: text("password_hash"), // nullable — Google OAuth users have no password
+  googleId: text("google_id").unique(), // Google OAuth user ID
   role: text("role", { enum: ["customer", "admin"] })
     .notNull()
     .default("customer"),
