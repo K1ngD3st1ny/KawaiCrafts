@@ -1,44 +1,37 @@
-import { Card, CardContent } from "@/components/ui/card";
+interface SeriesData {
+  name: string;
+  imageUrl: string | null;
+}
 
 interface FeaturedSeriesProps {
-  seriesList?: string[];
+  seriesData?: SeriesData[];
   onSeriesClick?: (seriesName: string) => void;
 }
 
-// Color map for known anime series
-const seriesStyles: Record<string, { color: string; textColor: string }> = {
-  "Demon Slayer": { color: "bg-gradient-to-r from-red-500 to-orange-500", textColor: "text-white" },
-  "One Piece": { color: "bg-gradient-to-r from-blue-500 to-cyan-500", textColor: "text-white" },
-  "Jujutsu Kaisen": { color: "bg-gradient-to-r from-purple-500 to-pink-500", textColor: "text-white" },
-  "Naruto": { color: "bg-gradient-to-r from-orange-500 to-yellow-500", textColor: "text-white" },
-  "Attack on Titan": { color: "bg-gradient-to-r from-gray-600 to-gray-800", textColor: "text-white" },
-  "Dragon Ball": { color: "bg-gradient-to-r from-yellow-400 to-orange-400", textColor: "text-black" },
-  "My Hero Academia": { color: "bg-gradient-to-r from-green-500 to-emerald-500", textColor: "text-white" },
-  "Chainsaw Man": { color: "bg-gradient-to-r from-red-600 to-red-800", textColor: "text-white" },
+// Gradient fallback colors for series without images
+const gradientMap: Record<string, string> = {
+  "Demon Slayer": "from-red-500 to-orange-500",
+  "One Piece": "from-blue-500 to-cyan-500",
+  "Jujutsu Kaisen": "from-purple-500 to-pink-500",
+  "Naruto": "from-orange-500 to-yellow-500",
+  "Attack on Titan": "from-gray-600 to-gray-800",
+  "Dragon Ball": "from-yellow-400 to-orange-400",
+  "My Hero Academia": "from-green-500 to-emerald-500",
+  "Chainsaw Man": "from-red-600 to-red-800",
 };
 
-const defaultStyle = {
-  color: "bg-gradient-to-r from-indigo-500 to-purple-500",
-  textColor: "text-white",
-};
-
-// Fallback series list used when no products exist in the DB yet
-const fallbackSeries = [
-  "Demon Slayer", "One Piece", "Jujutsu Kaisen", "Naruto",
-  "Attack on Titan", "Dragon Ball", "My Hero Academia", "Chainsaw Man",
-];
+const defaultGradient = "from-indigo-500 to-purple-500";
 
 export default function FeaturedSeries({
-  seriesList,
+  seriesData,
   onSeriesClick,
 }: FeaturedSeriesProps) {
-  const displaySeries = seriesList && seriesList.length > 0 ? seriesList : fallbackSeries;
+  if (!seriesData || seriesData.length === 0) return null;
 
   const handleSeriesClick = (seriesName: string) => {
     if (onSeriesClick) {
       onSeriesClick(seriesName);
     }
-    console.log(`Series clicked: ${seriesName}`);
   };
 
   return (
@@ -54,38 +47,56 @@ export default function FeaturedSeries({
         <div className="relative">
           {/* Horizontal Scrolling Container */}
           <div
-            className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide"
+            className="flex gap-8 overflow-x-auto pb-4 justify-center flex-wrap"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            {displaySeries.map((series) => {
-              const style = seriesStyles[series] || defaultStyle;
-              const id = series.toLowerCase().replace(/\s+/g, "-");
+            {seriesData.map((series) => {
+              const id = series.name.toLowerCase().replace(/\s+/g, "-");
+              const gradient = gradientMap[series.name] || defaultGradient;
 
               return (
-                <Card
-                  key={series}
-                  className="flex-shrink-0 w-48 h-28 overflow-hidden cursor-pointer group transition-all duration-300 hover:shadow-lg hover-elevate"
-                  onClick={() => handleSeriesClick(series)}
+                <button
+                  key={series.name}
+                  className="flex flex-col items-center gap-3 group cursor-pointer bg-transparent border-none p-2 transition-transform duration-300 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl"
+                  onClick={() => handleSeriesClick(series.name)}
                   data-testid={`card-series-${id}`}
+                  type="button"
                 >
-                  <CardContent className="p-0 h-full">
-                    <div
-                      className={`h-full flex items-center justify-center ${style.color} ${style.textColor} transition-transform duration-300 group-hover:scale-105`}
-                    >
-                      <h3
-                        className="text-lg font-heading font-bold text-center px-4 drop-shadow-sm"
-                        data-testid={`text-series-${id}`}
+                  {/* Circular Image Container */}
+                  <div
+                    className="relative w-24 h-24 rounded-full overflow-hidden ring-3 ring-transparent group-hover:ring-primary/60 transition-all duration-300 shadow-md group-hover:shadow-xl group-hover:shadow-primary/20"
+                  >
+                    {series.imageUrl ? (
+                      <img
+                        src={series.imageUrl}
+                        alt={series.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    ) : (
+                      <div
+                        className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${gradient}`}
                       >
-                        {series}
-                      </h3>
-                    </div>
-                  </CardContent>
-                </Card>
+                        <span className="text-2xl font-bold text-white drop-shadow-sm">
+                          {series.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Hover Glow Overlay */}
+                    <div className="absolute inset-0 rounded-full bg-white/0 group-hover:bg-white/10 transition-colors duration-300" />
+                  </div>
+
+                  {/* Series Name */}
+                  <span
+                    className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors duration-300 max-w-[100px] text-center leading-tight"
+                    data-testid={`text-series-${id}`}
+                  >
+                    {series.name}
+                  </span>
+                </button>
               );
             })}
           </div>
-
-
         </div>
       </div>
     </section>

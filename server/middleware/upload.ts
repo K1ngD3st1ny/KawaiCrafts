@@ -56,3 +56,19 @@ const profileImageMulter = multer({
 });
 
 export const profileImageUpload = profileImageMulter.single("avatar");
+
+// Series image upload — images only, 5 MB max
+const seriesImageMulter = multer({
+  storage,
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PNG, JPG, and WebP images are allowed for series images."));
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 }, // 5 MB
+});
+
+export const seriesImageUpload = seriesImageMulter.single("image");

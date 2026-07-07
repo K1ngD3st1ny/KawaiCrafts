@@ -17,6 +17,7 @@ import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminProducts from "@/pages/admin/AdminProducts";
 import AdminProductForm from "@/pages/admin/AdminProductForm";
+import AdminSeries from "@/pages/admin/AdminSeries";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
       {/* Admin routes */}
       <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/series" component={AdminSeries} />
       <Route path="/admin/products" component={AdminProducts} />
       <Route path="/admin/products/new" component={AdminProductForm} />
       <Route path="/admin/products/edit/:id" component={AdminProductForm} />

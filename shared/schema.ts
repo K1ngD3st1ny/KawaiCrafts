@@ -140,6 +140,30 @@ export const updateAddressSchema = insertAddressSchema.partial();
 export type InsertAddress = z.infer<typeof insertAddressSchema>;
 export type Address = typeof addresses.$inferSelect;
 
+// ─── Anime Series ────────────────────────────────────────────────────────────
+
+export const animeSeries = pgTable("anime_series", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  imageUrl: text("image_url"),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const insertAnimeSeriesSchema = createInsertSchema(animeSeries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateAnimeSeriesSchema = insertAnimeSeriesSchema.partial();
+
+export type InsertAnimeSeries = z.infer<typeof insertAnimeSeriesSchema>;
+export type AnimeSeries = typeof animeSeries.$inferSelect;
 
 // ─── Products ────────────────────────────────────────────────────────────────
 

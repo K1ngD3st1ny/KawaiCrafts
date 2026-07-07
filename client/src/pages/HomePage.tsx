@@ -38,10 +38,16 @@ interface PaginationInfo {
   hasPreviousPage: boolean;
 }
 
+interface SeriesData {
+  name: string;
+  imageUrl: string | null;
+}
+
 export default function HomePage() {
   const cart = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [seriesList, setSeriesList] = useState<string[]>([]);
+  const [seriesData, setSeriesData] = useState<SeriesData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSeries, setSelectedSeries] = useState("");
@@ -86,6 +92,20 @@ export default function HomePage() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // Fetch series data with images from the series API
+  useEffect(() => {
+    fetch("/api/series")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.series && data.series.length > 0) {
+          setSeriesData(
+            data.series.map((s: any) => ({ name: s.name, imageUrl: s.imageUrl }))
+          );
+        }
+      })
+      .catch((err) => console.error("Failed to fetch series:", err));
+  }, []);
 
   // Map API products to the format expected by ProductGrid
   const mappedProducts = products.map((p) => ({
@@ -158,7 +178,7 @@ export default function HomePage() {
       <main>
         <Hero onExploreClick={handleExploreClick} />
         <FeaturedSeries
-          seriesList={seriesList}
+          seriesData={seriesData.length > 0 ? seriesData : seriesList.map(s => ({ name: s, imageUrl: null }))}
           onSeriesClick={handleSeriesClick}
         />
 

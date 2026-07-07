@@ -8,6 +8,7 @@ import {
   LogOut,
   Scissors,
   Store,
+  Layers,
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -49,6 +50,12 @@ export default function AdminLayout({
       label: "Dashboard",
       href: "/admin/dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      id: "series",
+      label: "Series",
+      href: "/admin/series",
+      icon: Layers,
     },
     {
       id: "products",
