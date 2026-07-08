@@ -59,10 +59,7 @@ export default function Header({ onCartClick, onSearchSubmit }: HeaderProps) {
       .slice(0, 2);
   };
 
-  const animeSeriesList = [
-    "Demon Slayer", "One Piece", "Jujutsu Kaisen", "Naruto", 
-    "Attack on Titan", "Dragon Ball", "My Hero Academia", "Chainsaw Man"
-  ];
+
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -93,21 +90,6 @@ export default function Header({ onCartClick, onSearchSubmit }: HeaderProps) {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-4">
-            {/* Filter by Series */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" data-testid="button-series-filter">
-                  Filter by Series
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-48">
-                {animeSeriesList.map((series) => (
-                  <DropdownMenuItem key={series} data-testid={`menu-series-${series.toLowerCase().replace(/\s+/g, "-")}`}>
-                    {series}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
 
             {/* Wishlist */}
             <Button
@@ -268,9 +250,7 @@ export default function Header({ onCartClick, onSearchSubmit }: HeaderProps) {
               </div>
             </form>
             <div className="flex flex-col gap-2">
-              <Button variant="outline" className="justify-start" data-testid="button-series-filter-mobile">
-                Filter by Series
-              </Button>
+
               <Button
                 variant="ghost"
                 className="justify-start relative"
