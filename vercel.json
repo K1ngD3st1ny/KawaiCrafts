@@ -1,20 +1,20 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
+  "outputDirectory": "dist/public",
   "functions": {
     "api/index.mjs": {
-      "memory": 256,
       "maxDuration": 30
     }
   },
   "rewrites": [
     {
-      "source": "/assets/(.*)",
-      "destination": "/assets/$1"
+      "source": "/api/(.*)",
+      "destination": "/api/index.mjs"
     },
     {
       "source": "/(.*)",
-      "destination": "/api/index.mjs"
+      "destination": "/index.html"
     }
   ]
 }
