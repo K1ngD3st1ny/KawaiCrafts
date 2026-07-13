@@ -3,8 +3,9 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
+import LoadingScreen from "@/components/LoadingScreen";
 import HomePage from "@/pages/HomePage";
 import CheckoutPage from "@/pages/CheckoutPage";
 import LoginPage from "@/pages/LoginPage";
@@ -50,19 +51,34 @@ function Router() {
   );
 }
 
+/**
+ * Inner app shell — has access to AuthProvider context so it can
+ * read `isLoading` and display the branded loading screen during
+ * initial session restoration.
+ */
+function AppShell() {
+  const { isLoading } = useAuth();
+
+  return (
+    <CartProvider>
+      <TooltipProvider>
+        <LoadingScreen isLoading={isLoading} />
+        <Toaster />
+        <Router />
+      </TooltipProvider>
+    </CartProvider>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <CartProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </CartProvider>
+        <AppShell />
       </AuthProvider>
     </QueryClientProvider>
   );
 }
 
 export default App;
+
