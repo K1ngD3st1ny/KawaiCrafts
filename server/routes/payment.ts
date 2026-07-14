@@ -8,11 +8,27 @@ import { requireAuth } from "../middleware/auth";
 
 const router = Router();
 
-// ── Razorpay instance ────────────────────────────────────────────────
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+// ── Razorpay instance (lazy-initialized for serverless compatibility) ─
+let razorpay: Razorpay;
+
+function getRazorpay(): Razorpay {
+  if (!razorpay) {
+    const key_id = process.env.RAZORPAY_KEY_ID;
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!key_id || !key_secret) {
+      console.error("Razorpay env vars missing:", {
+        hasKeyId: !!key_id,
+        hasKeySecret: !!key_secret,
+        keyIdPrefix: key_id?.substring(0, 10) || "MISSING",
+      });
+      throw new Error("RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is not set");
+    }
+
+    razorpay = new Razorpay({ key_id, key_secret });
+  }
+  return razorpay;
+}
 
 // ── POST /api/payment/create-order ───────────────────────────────────
 router.post("/create-order", requireAuth, async (req: Request, res: Response) => {
@@ -31,7 +47,7 @@ router.post("/create-order", requireAuth, async (req: Request, res: Response) =>
         .json({ error: "Minimum order amount is ₹1 (100 paise)" });
     }
 
-    const order = await razorpay.orders.create({
+    const order = await getRazorpay().orders.create({
       amount: amountInPaise,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
