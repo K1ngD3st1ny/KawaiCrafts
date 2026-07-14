@@ -1,11 +1,9 @@
 import { Router, Request, Response } from "express";
-import bcrypt from "bcryptjs";
 import { db } from "../db";
 import {
   users,
   addresses,
   updateProfileSchema,
-  changePasswordSchema,
   insertAddressSchema,
   updateAddressSchema,
 } from "@shared/schema";
@@ -178,54 +176,6 @@ router.post(
   }
 );
 
-// ─── PATCH /api/profile/password ──────────────────────────────────────────────
-
-router.patch("/password", async (req: Request, res: Response) => {
-  try {
-    const parsed = changePasswordSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: "Validation failed",
-        details: parsed.error.flatten().fieldErrors,
-      });
-    }
-
-    const [user] = await db
-      .select({ passwordHash: users.passwordHash, googleId: users.googleId })
-      .from(users)
-      .where(eq(users.id, req.user!.userId))
-      .limit(1);
-
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    // Block Google-only users
-    if (user.googleId && !user.passwordHash) {
-      return res.status(400).json({
-        error: "Your account uses Google Sign-In. Password change is not available.",
-      });
-    }
-
-    if (!user.passwordHash) {
-      return res.status(400).json({ error: "No password set on this account" });
-    }
-
-    const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
-    if (!valid) {
-      return res.status(401).json({ error: "Current password is incorrect" });
-    }
-
-    const newHash = await bcrypt.hash(parsed.data.newPassword, 12);
-    await db
-      .update(users)
-      .set({ passwordHash: newHash })
-      .where(eq(users.id, req.user!.userId));
-
-    res.json({ message: "Password updated successfully" });
-  } catch (err: any) {
-    console.error("Change password error:", err.message);
-    res.status(500).json({ error: "Failed to change password" });
-  }
-});
 
 // ─── GET /api/profile/addresses ───────────────────────────────────────────────
 

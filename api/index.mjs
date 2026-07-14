@@ -14,9 +14,9 @@ import fs from "fs";
 // server/routes.ts
 import { createServer } from "http";
 
-// server/routes/auth.ts
+// server/routes/googleAuth.ts
 import { Router } from "express";
-import bcrypt from "bcryptjs";
+import { Google, generateState, generateCodeVerifier, decodeIdToken } from "arctic";
 
 // server/db.ts
 import { drizzle } from "drizzle-orm/neon-serverless";
@@ -27,7 +27,6 @@ var schema_exports = {};
 __export(schema_exports, {
   addresses: () => addresses,
   animeSeries: () => animeSeries,
-  changePasswordSchema: () => changePasswordSchema,
   downloads: () => downloads,
   insertAddressSchema: () => insertAddressSchema,
   insertAnimeSeriesSchema: () => insertAnimeSeriesSchema,
@@ -35,13 +34,10 @@ __export(schema_exports, {
   insertOrderItemSchema: () => insertOrderItemSchema,
   insertOrderSchema: () => insertOrderSchema,
   insertProductSchema: () => insertProductSchema,
-  insertUserSchema: () => insertUserSchema,
   insertWishlistSchema: () => insertWishlistSchema,
-  loginSchema: () => loginSchema,
   orderItems: () => orderItems,
   orders: () => orders,
   products: () => products,
-  registerSchema: () => registerSchema,
   updateAddressSchema: () => updateAddressSchema,
   updateAnimeSeriesSchema: () => updateAnimeSeriesSchema,
   updateProductSchema: () => updateProductSchema,
@@ -67,7 +63,7 @@ var users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash"),
-  // nullable — Google OAuth users have no password
+  // kept for backward compat — no longer written
   googleId: text("google_id").unique(),
   // Google OAuth user ID
   role: text("role", { enum: ["customer", "admin"] }).notNull().default("customer"),
@@ -86,19 +82,6 @@ var users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => /* @__PURE__ */ new Date())
 });
-var insertUserSchema = createInsertSchema(users).pick({ name: true, email: true, passwordHash: true }).extend({
-  email: z.string().email("Invalid email address"),
-  name: z.string().min(2, "Name must be at least 2 characters")
-});
-var registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters").max(100)
-});
-var loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required")
-});
 var updateProfileSchema = z.object({
   firstName: z.string().min(1, "First name is required").max(50).optional(),
   middleName: z.string().max(50).optional().nullable(),
@@ -109,10 +92,6 @@ var updateProfileSchema = z.object({
   phoneNumber: z.string().regex(/^[+]?[\d\s\-()]{7,15}$/, "Invalid phone number").optional().nullable(),
   alternatePhoneNumber: z.string().regex(/^[+]?[\d\s\-()]{7,15}$/, "Invalid phone number").optional().nullable(),
   name: z.string().min(2).max(100).optional()
-});
-var changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(6, "New password must be at least 6 characters").max(100)
 });
 var addresses = pgTable(
   "addresses",
@@ -285,7 +264,7 @@ if (!process.env.DATABASE_URL) {
 var pool = new Pool({ connectionString: process.env.DATABASE_URL });
 var db = drizzle(pool, { schema: schema_exports });
 
-// server/routes/auth.ts
+// server/routes/googleAuth.ts
 import { eq } from "drizzle-orm";
 
 // server/middleware/auth.ts
@@ -326,129 +305,8 @@ function requireAdmin(req, res, next) {
   });
 }
 
-// server/routes/auth.ts
-var router = Router();
-router.post("/register", async (req, res) => {
-  try {
-    const parsed = registerSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: "Validation failed",
-        details: parsed.error.flatten().fieldErrors
-      });
-    }
-    const { name, email, password } = parsed.data;
-    const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email.toLowerCase())).limit(1);
-    if (existing.length > 0) {
-      return res.status(409).json({ error: "Email already registered" });
-    }
-    const passwordHash = await bcrypt.hash(password, 12);
-    const [newUser] = await db.insert(users).values({
-      name,
-      email: email.toLowerCase(),
-      passwordHash,
-      role: "customer"
-    }).returning({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      role: users.role,
-      createdAt: users.createdAt
-    });
-    const token = generateToken({
-      userId: newUser.id,
-      email: newUser.email,
-      role: newUser.role
-    });
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1e3
-      // 7 days
-    });
-    res.status(201).json({ user: newUser, token });
-  } catch (err) {
-    console.error("Register error:", err.message);
-    res.status(500).json({ error: "Registration failed" });
-  }
-});
-router.post("/login", async (req, res) => {
-  try {
-    const parsed = loginSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: "Validation failed",
-        details: parsed.error.flatten().fieldErrors
-      });
-    }
-    const { email, password } = parsed.data;
-    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
-    if (!user) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
-    if (!user.passwordHash) {
-      return res.status(401).json({ error: "This account uses Google Sign-In. Please log in with Google." });
-    }
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role
-    });
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1e3
-    });
-    res.json({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        createdAt: user.createdAt
-      },
-      token
-    });
-  } catch (err) {
-    console.error("Login error:", err.message);
-    res.status(500).json({ error: "Login failed" });
-  }
-});
-router.post("/logout", (_req, res) => {
-  res.clearCookie("token");
-  res.json({ message: "Logged out successfully" });
-});
-router.get("/me", requireAuth, async (req, res) => {
-  try {
-    const [user] = await db.select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      role: users.role,
-      createdAt: users.createdAt
-    }).from(users).where(eq(users.id, req.user.userId)).limit(1);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    res.json({ user });
-  } catch (err) {
-    console.error("Get me error:", err.message);
-    res.status(500).json({ error: "Failed to get user info" });
-  }
-});
-var auth_default = router;
-
 // server/routes/googleAuth.ts
-import { Router as Router2 } from "express";
-import { Google, generateState, generateCodeVerifier, decodeIdToken } from "arctic";
-import { eq as eq2 } from "drizzle-orm";
-var router2 = Router2();
+var router = Router();
 function getGoogleClient() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -460,7 +318,11 @@ function getGoogleClient() {
   }
   return new Google(clientId, clientSecret, callbackUrl);
 }
-router2.get("/google", (_req, res) => {
+function resolveRole(email) {
+  const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
+  return adminEmail && email.toLowerCase() === adminEmail ? "admin" : "customer";
+}
+router.get("/google", (_req, res) => {
   try {
     const google = getGoogleClient();
     const state = generateState();
@@ -485,7 +347,7 @@ router2.get("/google", (_req, res) => {
     res.redirect("/login?error=oauth_config");
   }
 });
-router2.get("/google/callback", async (req, res) => {
+router.get("/google/callback", async (req, res) => {
   try {
     const { code, state, error } = req.query;
     if (error) {
@@ -506,23 +368,28 @@ router2.get("/google/callback", async (req, res) => {
     const google = getGoogleClient();
     const tokens = await google.validateAuthorizationCode(code, storedCodeVerifier);
     const claims = decodeIdToken(tokens.idToken());
-    const { sub: googleId, name, email } = claims;
+    const { sub: googleId, name, email, picture } = claims;
     if (!email) {
       return res.redirect("/login?error=oauth_no_email");
     }
-    let [user] = await db.select().from(users).where(eq2(users.googleId, googleId)).limit(1);
+    const role = resolveRole(email);
+    let [user] = await db.select().from(users).where(eq(users.googleId, googleId)).limit(1);
     if (!user) {
-      const [existingByEmail] = await db.select().from(users).where(eq2(users.email, email.toLowerCase())).limit(1);
+      const [existingByEmail] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
       if (existingByEmail) {
-        [user] = await db.update(users).set({ googleId }).where(eq2(users.id, existingByEmail.id)).returning();
+        [user] = await db.update(users).set({ googleId, role, profileImageUrl: existingByEmail.profileImageUrl || picture || null }).where(eq(users.id, existingByEmail.id)).returning();
       } else {
         [user] = await db.insert(users).values({
           name: name || email.split("@")[0],
           email: email.toLowerCase(),
           googleId,
-          passwordHash: null,
-          role: "customer"
+          role,
+          profileImageUrl: picture || null
         }).returning();
+      }
+    } else {
+      if (user.role !== role) {
+        [user] = await db.update(users).set({ role }).where(eq(users.id, user.id)).returning();
       }
     }
     const token = generateToken({
@@ -543,12 +410,34 @@ router2.get("/google/callback", async (req, res) => {
     res.redirect("/login?error=oauth_failed");
   }
 });
-var googleAuth_default = router2;
+router.post("/logout", (_req, res) => {
+  res.clearCookie("token");
+  res.json({ message: "Logged out successfully" });
+});
+router.get("/me", requireAuth, async (req, res) => {
+  try {
+    const [user] = await db.select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+      profileImageUrl: users.profileImageUrl,
+      createdAt: users.createdAt
+    }).from(users).where(eq(users.id, req.user.userId)).limit(1);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({ user });
+  } catch (err) {
+    console.error("Get me error:", err.message);
+    res.status(500).json({ error: "Failed to get user info" });
+  }
+});
+var googleAuth_default = router;
 
 // server/routes/profile.ts
-import { Router as Router3 } from "express";
-import bcrypt2 from "bcryptjs";
-import { eq as eq3, and } from "drizzle-orm";
+import { Router as Router2 } from "express";
+import { eq as eq2, and } from "drizzle-orm";
 
 // server/middleware/upload.ts
 import multer from "multer";
@@ -654,8 +543,8 @@ async function ensureBuckets() {
 }
 
 // server/routes/profile.ts
-var router3 = Router3();
-router3.use(requireAuth);
+var router2 = Router2();
+router2.use(requireAuth);
 var safeUserFields = {
   id: users.id,
   name: users.name,
@@ -676,11 +565,11 @@ var safeUserFields = {
   createdAt: users.createdAt,
   updatedAt: users.updatedAt
 };
-router3.get("/", async (req, res) => {
+router2.get("/", async (req, res) => {
   try {
-    const [user] = await db.select(safeUserFields).from(users).where(eq3(users.id, req.user.userId)).limit(1);
+    const [user] = await db.select(safeUserFields).from(users).where(eq2(users.id, req.user.userId)).limit(1);
     if (!user) return res.status(404).json({ error: "User not found" });
-    const userAddresses = await db.select().from(addresses).where(eq3(addresses.userId, req.user.userId)).orderBy(addresses.createdAt);
+    const userAddresses = await db.select().from(addresses).where(eq2(addresses.userId, req.user.userId)).orderBy(addresses.createdAt);
     res.json({
       user: {
         ...user,
@@ -695,7 +584,7 @@ router3.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch profile" });
   }
 });
-router3.patch("/", async (req, res) => {
+router2.patch("/", async (req, res) => {
   try {
     const parsed = updateProfileSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -704,7 +593,7 @@ router3.patch("/", async (req, res) => {
         details: parsed.error.flatten().fieldErrors
       });
     }
-    const [updated] = await db.update(users).set(parsed.data).where(eq3(users.id, req.user.userId)).returning(safeUserFields);
+    const [updated] = await db.update(users).set(parsed.data).where(eq2(users.id, req.user.userId)).returning(safeUserFields);
     res.json({
       user: {
         ...updated,
@@ -717,7 +606,7 @@ router3.patch("/", async (req, res) => {
     res.status(500).json({ error: "Failed to update profile" });
   }
 });
-router3.post(
+router2.post(
   "/avatar",
   profileImageUpload,
   async (req, res) => {
@@ -731,7 +620,7 @@ router3.post(
       }
       const ext = file.originalname.split(".").pop()?.toLowerCase() || "jpg";
       const fileName = `${req.user.userId}/avatar-${Date.now()}.${ext}`;
-      const [currentUser] = await db.select({ profileImageUrl: users.profileImageUrl }).from(users).where(eq3(users.id, req.user.userId)).limit(1);
+      const [currentUser] = await db.select({ profileImageUrl: users.profileImageUrl }).from(users).where(eq2(users.id, req.user.userId)).limit(1);
       if (currentUser?.profileImageUrl) {
         try {
           const urlParts = currentUser.profileImageUrl.split(`/${PROFILE_BUCKET}/`);
@@ -752,7 +641,7 @@ router3.post(
       const {
         data: { publicUrl }
       } = supabase.storage.from(PROFILE_BUCKET).getPublicUrl(fileName);
-      const [updated] = await db.update(users).set({ profileImageUrl: publicUrl }).where(eq3(users.id, req.user.userId)).returning(safeUserFields);
+      const [updated] = await db.update(users).set({ profileImageUrl: publicUrl }).where(eq2(users.id, req.user.userId)).returning(safeUserFields);
       res.json({ profileImageUrl: publicUrl, user: updated });
     } catch (err) {
       console.error("Avatar upload error:", err.message);
@@ -760,47 +649,16 @@ router3.post(
     }
   }
 );
-router3.patch("/password", async (req, res) => {
+router2.get("/addresses", async (req, res) => {
   try {
-    const parsed = changePasswordSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: "Validation failed",
-        details: parsed.error.flatten().fieldErrors
-      });
-    }
-    const [user] = await db.select({ passwordHash: users.passwordHash, googleId: users.googleId }).from(users).where(eq3(users.id, req.user.userId)).limit(1);
-    if (!user) return res.status(404).json({ error: "User not found" });
-    if (user.googleId && !user.passwordHash) {
-      return res.status(400).json({
-        error: "Your account uses Google Sign-In. Password change is not available."
-      });
-    }
-    if (!user.passwordHash) {
-      return res.status(400).json({ error: "No password set on this account" });
-    }
-    const valid = await bcrypt2.compare(parsed.data.currentPassword, user.passwordHash);
-    if (!valid) {
-      return res.status(401).json({ error: "Current password is incorrect" });
-    }
-    const newHash = await bcrypt2.hash(parsed.data.newPassword, 12);
-    await db.update(users).set({ passwordHash: newHash }).where(eq3(users.id, req.user.userId));
-    res.json({ message: "Password updated successfully" });
-  } catch (err) {
-    console.error("Change password error:", err.message);
-    res.status(500).json({ error: "Failed to change password" });
-  }
-});
-router3.get("/addresses", async (req, res) => {
-  try {
-    const userAddresses = await db.select().from(addresses).where(eq3(addresses.userId, req.user.userId)).orderBy(addresses.createdAt);
+    const userAddresses = await db.select().from(addresses).where(eq2(addresses.userId, req.user.userId)).orderBy(addresses.createdAt);
     res.json({ addresses: userAddresses });
   } catch (err) {
     console.error("Get addresses error:", err.message);
     res.status(500).json({ error: "Failed to fetch addresses" });
   }
 });
-router3.post("/addresses", async (req, res) => {
+router2.post("/addresses", async (req, res) => {
   try {
     const parsed = insertAddressSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -809,13 +667,13 @@ router3.post("/addresses", async (req, res) => {
         details: parsed.error.flatten().fieldErrors
       });
     }
-    const existing = await db.select({ id: addresses.id }).from(addresses).where(eq3(addresses.userId, req.user.userId)).limit(1);
+    const existing = await db.select({ id: addresses.id }).from(addresses).where(eq2(addresses.userId, req.user.userId)).limit(1);
     const isFirst = existing.length === 0;
     if (parsed.data.isDefaultShipping || isFirst) {
-      await db.update(addresses).set({ isDefaultShipping: false }).where(eq3(addresses.userId, req.user.userId));
+      await db.update(addresses).set({ isDefaultShipping: false }).where(eq2(addresses.userId, req.user.userId));
     }
     if (parsed.data.isDefaultBilling || isFirst) {
-      await db.update(addresses).set({ isDefaultBilling: false }).where(eq3(addresses.userId, req.user.userId));
+      await db.update(addresses).set({ isDefaultBilling: false }).where(eq2(addresses.userId, req.user.userId));
     }
     const [newAddress] = await db.insert(addresses).values({
       ...parsed.data,
@@ -829,10 +687,10 @@ router3.post("/addresses", async (req, res) => {
     res.status(500).json({ error: "Failed to create address" });
   }
 });
-router3.put("/addresses/:id", async (req, res) => {
+router2.put("/addresses/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const [existing] = await db.select().from(addresses).where(and(eq3(addresses.id, id), eq3(addresses.userId, req.user.userId))).limit(1);
+    const [existing] = await db.select().from(addresses).where(and(eq2(addresses.id, id), eq2(addresses.userId, req.user.userId))).limit(1);
     if (!existing) return res.status(404).json({ error: "Address not found" });
     const parsed = updateAddressSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -842,31 +700,31 @@ router3.put("/addresses/:id", async (req, res) => {
       });
     }
     if (parsed.data.isDefaultShipping) {
-      await db.update(addresses).set({ isDefaultShipping: false }).where(eq3(addresses.userId, req.user.userId));
+      await db.update(addresses).set({ isDefaultShipping: false }).where(eq2(addresses.userId, req.user.userId));
     }
     if (parsed.data.isDefaultBilling) {
-      await db.update(addresses).set({ isDefaultBilling: false }).where(eq3(addresses.userId, req.user.userId));
+      await db.update(addresses).set({ isDefaultBilling: false }).where(eq2(addresses.userId, req.user.userId));
     }
-    const [updated] = await db.update(addresses).set(parsed.data).where(and(eq3(addresses.id, id), eq3(addresses.userId, req.user.userId))).returning();
+    const [updated] = await db.update(addresses).set(parsed.data).where(and(eq2(addresses.id, id), eq2(addresses.userId, req.user.userId))).returning();
     res.json({ address: updated });
   } catch (err) {
     console.error("Update address error:", err.message);
     res.status(500).json({ error: "Failed to update address" });
   }
 });
-router3.delete("/addresses/:id", async (req, res) => {
+router2.delete("/addresses/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const [existing] = await db.select().from(addresses).where(and(eq3(addresses.id, id), eq3(addresses.userId, req.user.userId))).limit(1);
+    const [existing] = await db.select().from(addresses).where(and(eq2(addresses.id, id), eq2(addresses.userId, req.user.userId))).limit(1);
     if (!existing) return res.status(404).json({ error: "Address not found" });
-    await db.delete(addresses).where(and(eq3(addresses.id, id), eq3(addresses.userId, req.user.userId)));
+    await db.delete(addresses).where(and(eq2(addresses.id, id), eq2(addresses.userId, req.user.userId)));
     if (existing.isDefaultShipping || existing.isDefaultBilling) {
-      const [next] = await db.select().from(addresses).where(eq3(addresses.userId, req.user.userId)).limit(1);
+      const [next] = await db.select().from(addresses).where(eq2(addresses.userId, req.user.userId)).limit(1);
       if (next) {
         await db.update(addresses).set({
           isDefaultShipping: existing.isDefaultShipping || next.isDefaultShipping,
           isDefaultBilling: existing.isDefaultBilling || next.isDefaultBilling
-        }).where(eq3(addresses.id, next.id));
+        }).where(eq2(addresses.id, next.id));
       }
     }
     res.json({ message: "Address deleted" });
@@ -875,33 +733,33 @@ router3.delete("/addresses/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete address" });
   }
 });
-router3.patch("/addresses/:id/default", async (req, res) => {
+router2.patch("/addresses/:id/default", async (req, res) => {
   try {
     const { id } = req.params;
     const { type } = req.body;
     if (!["shipping", "billing"].includes(type)) {
       return res.status(400).json({ error: "type must be 'shipping' or 'billing'" });
     }
-    const [existing] = await db.select({ id: addresses.id }).from(addresses).where(and(eq3(addresses.id, id), eq3(addresses.userId, req.user.userId))).limit(1);
+    const [existing] = await db.select({ id: addresses.id }).from(addresses).where(and(eq2(addresses.id, id), eq2(addresses.userId, req.user.userId))).limit(1);
     if (!existing) return res.status(404).json({ error: "Address not found" });
     const field = type === "shipping" ? "isDefaultShipping" : "isDefaultBilling";
     const dbField = type === "shipping" ? { isDefaultShipping: false } : { isDefaultBilling: false };
     const setField = type === "shipping" ? { isDefaultShipping: true } : { isDefaultBilling: true };
-    await db.update(addresses).set(dbField).where(eq3(addresses.userId, req.user.userId));
-    const [updated] = await db.update(addresses).set(setField).where(and(eq3(addresses.id, id), eq3(addresses.userId, req.user.userId))).returning();
+    await db.update(addresses).set(dbField).where(eq2(addresses.userId, req.user.userId));
+    const [updated] = await db.update(addresses).set(setField).where(and(eq2(addresses.id, id), eq2(addresses.userId, req.user.userId))).returning();
     res.json({ address: updated });
   } catch (err) {
     console.error("Set default address error:", err.message);
     res.status(500).json({ error: "Failed to set default address" });
   }
 });
-var profile_default = router3;
+var profile_default = router2;
 
 // server/routes/products.ts
-import { Router as Router4 } from "express";
-import { eq as eq4, and as and2, ilike, or, desc, asc, sql } from "drizzle-orm";
-var router4 = Router4();
-router4.get("/", async (req, res) => {
+import { Router as Router3 } from "express";
+import { eq as eq3, and as and2, ilike, or, desc, asc, sql } from "drizzle-orm";
+var router3 = Router3();
+router3.get("/", async (req, res) => {
   try {
     const {
       search,
@@ -914,7 +772,7 @@ router4.get("/", async (req, res) => {
     const pageNum = Math.max(1, parseInt(page) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 16));
     const offset = (pageNum - 1) * limitNum;
-    const conditions = [eq4(products.active, true)];
+    const conditions = [eq3(products.active, true)];
     if (search) {
       conditions.push(
         or(
@@ -926,10 +784,10 @@ router4.get("/", async (req, res) => {
       );
     }
     if (series) {
-      conditions.push(eq4(products.animeSeries, series));
+      conditions.push(eq3(products.animeSeries, series));
     }
     if (featured === "true") {
-      conditions.push(eq4(products.featured, true));
+      conditions.push(eq3(products.featured, true));
     }
     let orderBy;
     switch (sort) {
@@ -951,7 +809,7 @@ router4.get("/", async (req, res) => {
     const [{ count }] = await db.select({ count: sql`count(*)::int` }).from(products).where(and2(...conditions));
     const totalProducts = count;
     const totalPages = Math.ceil(totalProducts / limitNum);
-    const seriesList = await db.selectDistinct({ animeSeries: products.animeSeries }).from(products).where(eq4(products.active, true)).orderBy(asc(products.animeSeries));
+    const seriesList = await db.selectDistinct({ animeSeries: products.animeSeries }).from(products).where(eq3(products.active, true)).orderBy(asc(products.animeSeries));
     res.json({
       products: results,
       page: pageNum,
@@ -967,13 +825,13 @@ router4.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch products" });
   }
 });
-router4.get("/:id", async (req, res) => {
+router3.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const [product] = await db.select().from(products).where(
       and2(
-        eq4(products.active, true),
-        or(eq4(products.id, id), eq4(products.slug, id))
+        eq3(products.active, true),
+        or(eq3(products.id, id), eq3(products.slug, id))
       )
     ).limit(1);
     if (!product) {
@@ -985,68 +843,21 @@ router4.get("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch product" });
   }
 });
-var products_default = router4;
+var products_default = router3;
 
 // server/routes/admin.ts
-import { Router as Router5 } from "express";
-import { eq as eq5, desc as desc2, sql as sql2, and as and3 } from "drizzle-orm";
-import bcrypt3 from "bcryptjs";
+import { Router as Router4 } from "express";
+import { eq as eq4, desc as desc2, sql as sql2 } from "drizzle-orm";
 import { randomUUID } from "crypto";
-var router5 = Router5();
-router5.post("/login", async (req, res) => {
-  try {
-    const parsed = loginSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: "Validation failed",
-        details: parsed.error.flatten().fieldErrors
-      });
-    }
-    const { email, password } = parsed.data;
-    const [user] = await db.select().from(users).where(and3(eq5(users.email, email.toLowerCase()), eq5(users.role, "admin"))).limit(1);
-    if (!user) {
-      return res.status(401).json({ error: "Invalid admin credentials" });
-    }
-    if (!user.passwordHash) {
-      return res.status(401).json({ error: "Invalid admin credentials" });
-    }
-    const valid = await bcrypt3.compare(password, user.passwordHash);
-    if (!valid) {
-      return res.status(401).json({ error: "Invalid admin credentials" });
-    }
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: "admin"
-    });
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1e3
-    });
-    res.json({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      },
-      token
-    });
-  } catch (err) {
-    console.error("Admin login error:", err.message);
-    res.status(500).json({ error: "Login failed" });
-  }
-});
-router5.get("/dashboard", requireAdmin, async (_req, res) => {
+var router4 = Router4();
+router4.get("/dashboard", requireAdmin, async (_req, res) => {
   try {
     const [productCount] = await db.select({ count: sql2`count(*)::int` }).from(products);
-    const [customerCount] = await db.select({ count: sql2`count(*)::int` }).from(users).where(eq5(users.role, "customer"));
+    const [customerCount] = await db.select({ count: sql2`count(*)::int` }).from(users).where(eq4(users.role, "customer"));
     const [orderCount] = await db.select({ count: sql2`count(*)::int` }).from(orders);
     const [revenueResult] = await db.select({
       total: sql2`coalesce(sum(total_amount), 0)`
-    }).from(orders).where(eq5(orders.paymentStatus, "completed"));
+    }).from(orders).where(eq4(orders.paymentStatus, "completed"));
     const recentProducts = await db.select().from(products).orderBy(desc2(products.createdAt)).limit(5);
     res.json({
       stats: {
@@ -1062,7 +873,7 @@ router5.get("/dashboard", requireAdmin, async (_req, res) => {
     res.status(500).json({ error: "Failed to load dashboard" });
   }
 });
-router5.get("/products", requireAdmin, async (_req, res) => {
+router4.get("/products", requireAdmin, async (_req, res) => {
   try {
     const allProducts = await db.select().from(products).orderBy(desc2(products.createdAt));
     res.json({ products: allProducts });
@@ -1071,7 +882,7 @@ router5.get("/products", requireAdmin, async (_req, res) => {
     res.status(500).json({ error: "Failed to fetch products" });
   }
 });
-router5.post(
+router4.post(
   "/products",
   requireAdmin,
   productUpload,
@@ -1141,7 +952,7 @@ router5.post(
     }
   }
 );
-router5.put(
+router4.put(
   "/products/:id",
   requireAdmin,
   productUpload,
@@ -1149,7 +960,7 @@ router5.put(
     try {
       const { id } = req.params;
       const files = req.files;
-      const [existing] = await db.select().from(products).where(eq5(products.id, id)).limit(1);
+      const [existing] = await db.select().from(products).where(eq4(products.id, id)).limit(1);
       if (!existing) {
         return res.status(404).json({ error: "Product not found" });
       }
@@ -1215,7 +1026,7 @@ router5.put(
         }
         updateData.pdfUrl = fileName;
       }
-      const [updated] = await db.update(products).set(updateData).where(eq5(products.id, id)).returning();
+      const [updated] = await db.update(products).set(updateData).where(eq4(products.id, id)).returning();
       res.json({ product: updated });
     } catch (err) {
       console.error("Update product error:", err.message);
@@ -1223,13 +1034,13 @@ router5.put(
     }
   }
 );
-router5.delete(
+router4.delete(
   "/products/:id",
   requireAdmin,
   async (req, res) => {
     try {
       const { id } = req.params;
-      const [existing] = await db.select().from(products).where(eq5(products.id, id)).limit(1);
+      const [existing] = await db.select().from(products).where(eq4(products.id, id)).limit(1);
       if (!existing) {
         return res.status(404).json({ error: "Product not found" });
       }
@@ -1248,7 +1059,7 @@ router5.delete(
         } catch {
         }
       }
-      await db.delete(products).where(eq5(products.id, id));
+      await db.delete(products).where(eq4(products.id, id));
       res.json({ message: "Product deleted successfully" });
     } catch (err) {
       console.error("Delete product error:", err.message);
@@ -1256,23 +1067,23 @@ router5.delete(
     }
   }
 );
-var admin_default = router5;
+var admin_default = router4;
 
 // server/routes/downloads.ts
-import { Router as Router6 } from "express";
-import { eq as eq6, and as and4 } from "drizzle-orm";
-var router6 = Router6();
-router6.get("/:productId", requireAuth, async (req, res) => {
+import { Router as Router5 } from "express";
+import { eq as eq5, and as and4 } from "drizzle-orm";
+var router5 = Router5();
+router5.get("/:productId", requireAuth, async (req, res) => {
   try {
     const { productId } = req.params;
     const userId = req.user.userId;
     const [downloadRecord] = await db.select().from(downloads).where(
-      and4(eq6(downloads.userId, userId), eq6(downloads.productId, productId))
+      and4(eq5(downloads.userId, userId), eq5(downloads.productId, productId))
     ).limit(1);
     if (!downloadRecord) {
       return res.status(403).json({ error: "You do not have access to this product" });
     }
-    const [product] = await db.select({ pdfUrl: products.pdfUrl, title: products.title }).from(products).where(eq6(products.id, productId)).limit(1);
+    const [product] = await db.select({ pdfUrl: products.pdfUrl, title: products.title }).from(products).where(eq5(products.id, productId)).limit(1);
     if (!product || !product.pdfUrl) {
       return res.status(404).json({ error: "Product PDF not found" });
     }
@@ -1284,14 +1095,14 @@ router6.get("/:productId", requireAuth, async (req, res) => {
     await db.update(downloads).set({
       downloadCount: downloadRecord.downloadCount + 1,
       lastDownloadedAt: /* @__PURE__ */ new Date()
-    }).where(eq6(downloads.id, downloadRecord.id));
+    }).where(eq5(downloads.id, downloadRecord.id));
     res.json({ downloadUrl: data.signedUrl });
   } catch (err) {
     console.error("Download route error:", err.message);
     res.status(500).json({ error: "Failed to generate download link" });
   }
 });
-router6.get(
+router5.get(
   "/user/list",
   requireAuth,
   async (req, res) => {
@@ -1306,7 +1117,7 @@ router6.get(
         productTitle: products.title,
         productThumbnail: products.thumbnailUrl,
         productSeries: products.animeSeries
-      }).from(downloads).innerJoin(products, eq6(downloads.productId, products.id)).where(eq6(downloads.userId, userId)).orderBy(downloads.createdAt);
+      }).from(downloads).innerJoin(products, eq5(downloads.productId, products.id)).where(eq5(downloads.userId, userId)).orderBy(downloads.createdAt);
       res.json({ downloads: userDownloads });
     } catch (err) {
       console.error("List downloads error:", err.message);
@@ -1314,14 +1125,14 @@ router6.get(
     }
   }
 );
-var downloads_default = router6;
+var downloads_default = router5;
 
 // server/routes/wishlist.ts
-import { Router as Router7 } from "express";
-import { eq as eq7, and as and5 } from "drizzle-orm";
+import { Router as Router6 } from "express";
+import { eq as eq6, and as and5 } from "drizzle-orm";
 import { z as z2 } from "zod";
-var router7 = Router7();
-router7.get("/", requireAuth, async (req, res) => {
+var router6 = Router6();
+router6.get("/", requireAuth, async (req, res) => {
   try {
     const userId = req.user.userId;
     const userWishlist = await db.select({
@@ -1329,14 +1140,14 @@ router7.get("/", requireAuth, async (req, res) => {
       productId: wishlists.productId,
       createdAt: wishlists.createdAt,
       product: products
-    }).from(wishlists).innerJoin(products, eq7(wishlists.productId, products.id)).where(eq7(wishlists.userId, userId));
+    }).from(wishlists).innerJoin(products, eq6(wishlists.productId, products.id)).where(eq6(wishlists.userId, userId));
     res.json(userWishlist);
   } catch (error) {
     console.error("Error fetching wishlist:", error);
     res.status(500).json({ error: "Failed to fetch wishlist" });
   }
 });
-router7.post("/:productId", requireAuth, async (req, res) => {
+router6.post("/:productId", requireAuth, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { productId } = req.params;
@@ -1345,11 +1156,11 @@ router7.post("/:productId", requireAuth, async (req, res) => {
     if (!result.success) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
-    const existing = await db.select().from(wishlists).where(and5(eq7(wishlists.userId, userId), eq7(wishlists.productId, productId))).limit(1);
+    const existing = await db.select().from(wishlists).where(and5(eq6(wishlists.userId, userId), eq6(wishlists.productId, productId))).limit(1);
     if (existing.length > 0) {
       return res.status(409).json({ error: "Product already in wishlist" });
     }
-    const productExists = await db.select().from(products).where(eq7(products.id, productId)).limit(1);
+    const productExists = await db.select().from(products).where(eq6(products.id, productId)).limit(1);
     if (productExists.length === 0) {
       return res.status(404).json({ error: "Product not found" });
     }
@@ -1363,11 +1174,11 @@ router7.post("/:productId", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to add to wishlist" });
   }
 });
-router7.delete("/:productId", requireAuth, async (req, res) => {
+router6.delete("/:productId", requireAuth, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { productId } = req.params;
-    const result = await db.delete(wishlists).where(and5(eq7(wishlists.userId, userId), eq7(wishlists.productId, productId))).returning();
+    const result = await db.delete(wishlists).where(and5(eq6(wishlists.userId, userId), eq6(wishlists.productId, productId))).returning();
     if (result.length === 0) {
       return res.status(404).json({ error: "Wishlist item not found" });
     }
@@ -1377,14 +1188,14 @@ router7.delete("/:productId", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to remove from wishlist" });
   }
 });
-var wishlist_default = router7;
+var wishlist_default = router6;
 
 // server/routes/series.ts
-import { Router as Router8 } from "express";
-import { eq as eq8, asc as asc2 } from "drizzle-orm";
+import { Router as Router7 } from "express";
+import { eq as eq7, asc as asc2 } from "drizzle-orm";
 import { randomUUID as randomUUID2 } from "crypto";
-var router8 = Router8();
-router8.get("/", async (_req, res) => {
+var router7 = Router7();
+router7.get("/", async (_req, res) => {
   try {
     const allSeries = await db.select().from(animeSeries).orderBy(asc2(animeSeries.displayOrder), asc2(animeSeries.name));
     res.json({ series: allSeries });
@@ -1393,7 +1204,7 @@ router8.get("/", async (_req, res) => {
     res.status(500).json({ error: "Failed to fetch series" });
   }
 });
-router8.post(
+router7.post(
   "/",
   requireAdmin,
   seriesImageUpload,
@@ -1442,14 +1253,14 @@ router8.post(
     }
   }
 );
-router8.put(
+router7.put(
   "/:id",
   requireAdmin,
   seriesImageUpload,
   async (req, res) => {
     try {
       const { id } = req.params;
-      const [existing] = await db.select().from(animeSeries).where(eq8(animeSeries.id, id)).limit(1);
+      const [existing] = await db.select().from(animeSeries).where(eq7(animeSeries.id, id)).limit(1);
       if (!existing) {
         return res.status(404).json({ error: "Series not found" });
       }
@@ -1490,7 +1301,7 @@ router8.put(
         } = supabase.storage.from(SERIES_BUCKET).getPublicUrl(fileName);
         updateData.imageUrl = publicUrl;
       }
-      const [updated] = await db.update(animeSeries).set(updateData).where(eq8(animeSeries.id, id)).returning();
+      const [updated] = await db.update(animeSeries).set(updateData).where(eq7(animeSeries.id, id)).returning();
       res.json({ series: updated });
     } catch (err) {
       console.error("Update series error:", err.message);
@@ -1501,13 +1312,13 @@ router8.put(
     }
   }
 );
-router8.delete(
+router7.delete(
   "/:id",
   requireAdmin,
   async (req, res) => {
     try {
       const { id } = req.params;
-      const [existing] = await db.select().from(animeSeries).where(eq8(animeSeries.id, id)).limit(1);
+      const [existing] = await db.select().from(animeSeries).where(eq7(animeSeries.id, id)).limit(1);
       if (!existing) {
         return res.status(404).json({ error: "Series not found" });
       }
@@ -1520,7 +1331,7 @@ router8.delete(
         } catch {
         }
       }
-      await db.delete(animeSeries).where(eq8(animeSeries.id, id));
+      await db.delete(animeSeries).where(eq7(animeSeries.id, id));
       res.json({ message: "Series deleted successfully" });
     } catch (err) {
       console.error("Delete series error:", err.message);
@@ -1528,14 +1339,14 @@ router8.delete(
     }
   }
 );
-var series_default = router8;
+var series_default = router7;
 
 // server/routes/payment.ts
-import { Router as Router9 } from "express";
+import { Router as Router8 } from "express";
 import Razorpay from "razorpay";
 import crypto from "crypto";
-import { eq as eq9, and as and6 } from "drizzle-orm";
-var router9 = Router9();
+import { eq as eq8, and as and6 } from "drizzle-orm";
+var router8 = Router8();
 var razorpay;
 function getRazorpay() {
   if (!razorpay) {
@@ -1553,7 +1364,7 @@ function getRazorpay() {
   }
   return razorpay;
 }
-router9.post("/create-order", requireAuth, async (req, res) => {
+router8.post("/create-order", requireAuth, async (req, res) => {
   try {
     const { amount } = req.body;
     if (!amount || typeof amount !== "number" || amount <= 0) {
@@ -1581,7 +1392,7 @@ router9.post("/create-order", requireAuth, async (req, res) => {
     return res.status(500).json({ error: err.error?.description || "Failed to create order" });
   }
 });
-router9.post("/verify", requireAuth, async (req, res) => {
+router8.post("/verify", requireAuth, async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, items, totalAmount } = req.body;
     const userId = req.user.userId;
@@ -1608,7 +1419,7 @@ router9.post("/verify", requireAuth, async (req, res) => {
           price: String(item.price)
         });
         const [existing] = await db.select().from(downloads).where(
-          and6(eq9(downloads.userId, userId), eq9(downloads.productId, item.id))
+          and6(eq8(downloads.userId, userId), eq8(downloads.productId, item.id))
         ).limit(1);
         if (!existing) {
           await db.insert(downloads).values({
@@ -1628,11 +1439,10 @@ router9.post("/verify", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Payment verification failed" });
   }
 });
-var payment_default = router9;
+var payment_default = router8;
 
 // server/routes.ts
 async function registerRoutes(app2) {
-  app2.use("/api/auth", auth_default);
   app2.use("/api/auth", googleAuth_default);
   app2.use("/api/profile", profile_default);
   app2.use("/api/products", products_default);

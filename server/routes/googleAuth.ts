@@ -3,7 +3,7 @@ import { Google, generateState, generateCodeVerifier, decodeIdToken } from "arct
 import { db } from "../db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
-import { generateToken } from "../middleware/auth";
+import { generateToken, requireAuth } from "../middleware/auth";
 
 const router = Router();
 
@@ -23,6 +23,13 @@ function getGoogleClient() {
   }
 
   return new Google(clientId, clientSecret, callbackUrl);
+}
+
+// ─── Helper: resolve role based on ADMIN_EMAIL env var ────────────────────────
+
+function resolveRole(email: string): "admin" | "customer" {
+  const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
+  return adminEmail && email.toLowerCase() === adminEmail ? "admin" : "customer";
 }
 
 // ─── GET /api/auth/google ────────────────────────────────────────────────────
@@ -104,11 +111,14 @@ router.get("/google/callback", async (req: Request, res: Response) => {
       picture?: string;
     };
 
-    const { sub: googleId, name, email } = claims;
+    const { sub: googleId, name, email, picture } = claims;
 
     if (!email) {
       return res.redirect("/login?error=oauth_no_email");
     }
+
+    // Determine the role based on ADMIN_EMAIL
+    const role = resolveRole(email);
 
     // ── Find or create user ──────────────────────────────────────────────────
 
@@ -120,7 +130,7 @@ router.get("/google/callback", async (req: Request, res: Response) => {
       .limit(1);
 
     if (!user) {
-      // 2. Try to find by email (existing email/password user — link their Google account)
+      // 2. Try to find by email (existing user — link their Google account)
       const [existingByEmail] = await db
         .select()
         .from(users)
@@ -128,28 +138,37 @@ router.get("/google/callback", async (req: Request, res: Response) => {
         .limit(1);
 
       if (existingByEmail) {
-        // Link Google ID to existing account
+        // Link Google ID to existing account and update role
         [user] = await db
           .update(users)
-          .set({ googleId })
+          .set({ googleId, role, profileImageUrl: existingByEmail.profileImageUrl || picture || null })
           .where(eq(users.id, existingByEmail.id))
           .returning();
       } else {
-        // 3. Brand new user — create account (no password)
+        // 3. Brand new user — create account
         [user] = await db
           .insert(users)
           .values({
             name: name || email.split("@")[0],
             email: email.toLowerCase(),
             googleId,
-            passwordHash: null,
-            role: "customer",
+            role,
+            profileImageUrl: picture || null,
           })
+          .returning();
+      }
+    } else {
+      // Existing Google user — ensure role stays correct (admin stays admin)
+      if (user.role !== role) {
+        [user] = await db
+          .update(users)
+          .set({ role })
+          .where(eq(users.id, user.id))
           .returning();
       }
     }
 
-    // ── Issue JWT cookie (same as email/password login) ──────────────────────
+    // ── Issue JWT cookie ─────────────────────────────────────────────────────
     const token = generateToken({
       userId: user.id,
       email: user.email,
@@ -168,6 +187,41 @@ router.get("/google/callback", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("Google OAuth callback error:", err.message);
     res.redirect("/login?error=oauth_failed");
+  }
+});
+
+// ─── POST /api/auth/logout ───────────────────────────────────────────────────
+
+router.post("/logout", (_req: Request, res: Response) => {
+  res.clearCookie("token");
+  res.json({ message: "Logged out successfully" });
+});
+
+// ─── GET /api/auth/me ────────────────────────────────────────────────────────
+
+router.get("/me", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const [user] = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        profileImageUrl: users.profileImageUrl,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(eq(users.id, req.user!.userId))
+      .limit(1);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ user });
+  } catch (err: any) {
+    console.error("Get me error:", err.message);
+    res.status(500).json({ error: "Failed to get user info" });
   }
 });
 

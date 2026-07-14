@@ -20,7 +20,7 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash"), // nullable — Google OAuth users have no password
+  passwordHash: text("password_hash"), // kept for backward compat — no longer written
   googleId: text("google_id").unique(), // Google OAuth user ID
   role: text("role", { enum: ["customer", "admin"] })
     .notNull()
@@ -43,27 +43,6 @@ export const users = pgTable("users", {
     .$onUpdate(() => new Date()),
 });
 
-export const insertUserSchema = createInsertSchema(users)
-  .pick({ name: true, email: true, passwordHash: true })
-  .extend({
-    email: z.string().email("Invalid email address"),
-    name: z.string().min(2, "Name must be at least 2 characters"),
-  });
-
-export const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters")
-    .max(100),
-});
-
-export const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
-});
-
 export const updateProfileSchema = z.object({
   firstName: z.string().min(1, "First name is required").max(50).optional(),
   middleName: z.string().max(50).optional().nullable(),
@@ -76,12 +55,6 @@ export const updateProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),
 });
 
-export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(6, "New password must be at least 6 characters").max(100),
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
 // ─── Addresses ────────────────────────────────────────────────────────────────

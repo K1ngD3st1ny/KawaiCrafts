@@ -1,5 +1,4 @@
 import "dotenv/config";
-import bcrypt from "bcryptjs";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { Pool } from "@neondatabase/serverless";
 import { users } from "../shared/schema";
@@ -11,25 +10,27 @@ async function seed() {
 
   console.log("🌱 Seeding database...");
 
-  // Create admin user
-  const adminEmail = "admin@kawaicrafts.com";
-  const [existing] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, adminEmail))
-    .limit(1);
+  // Admin is now auto-created on first Google login via ADMIN_EMAIL env var.
+  // This seed script only verifies the configuration.
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail) {
+    console.log(`ℹ️  ADMIN_EMAIL is set to: ${adminEmail}`);
+    console.log(`   This account will be assigned the admin role on first Google sign-in.`);
 
-  if (!existing) {
-    const passwordHash = await bcrypt.hash("admin123", 12);
-    await db.insert(users).values({
-      name: "Admin",
-      email: adminEmail,
-      passwordHash,
-      role: "admin",
-    });
-    console.log(`✅ Admin created: ${adminEmail} / admin123`);
+    // Check if admin already exists
+    const [existing] = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.email, adminEmail.toLowerCase()))
+      .limit(1);
+
+    if (existing) {
+      console.log(`✅ Admin user exists (role: ${existing.role})`);
+    } else {
+      console.log(`⏳ Admin user will be created on first Google sign-in.`);
+    }
   } else {
-    console.log(`ℹ️  Admin already exists: ${adminEmail}`);
+    console.warn("⚠️  ADMIN_EMAIL is not set — no admin account will be auto-created.");
   }
 
   console.log("✅ Seed complete!");

@@ -201,23 +201,13 @@ export default function Header({ onCartClick, onSearchSubmit }: HeaderProps) {
               </DropdownMenu>
             ) : (
               /* Auth - Logged Out */
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setLocation("/login")}
-                  data-testid="button-login"
-                >
-                  Login
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setLocation("/register")}
-                  data-testid="button-register"
-                >
-                  Register
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                onClick={() => setLocation("/login")}
+                data-testid="button-sign-in"
+              >
+                Sign In
+              </Button>
             )}
           </div>
 
@@ -318,20 +308,13 @@ export default function Header({ onCartClick, onSearchSubmit }: HeaderProps) {
               ) : (
                 <>
                   <Button
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => { setLocation("/login"); setIsMobileMenuOpen(false); }}
-                    data-testid="button-login-mobile"
-                  >
-                    <User className="h-5 w-5 mr-2" />
-                    Login
-                  </Button>
-                  <Button
                     variant="default"
                     className="justify-start"
-                    onClick={() => { setLocation("/register"); setIsMobileMenuOpen(false); }}
+                    onClick={() => { setLocation("/login"); setIsMobileMenuOpen(false); }}
+                    data-testid="button-sign-in-mobile"
                   >
-                    Register
+                    <User className="h-5 w-5 mr-2" />
+                    Sign In
                   </Button>
                 </>
               )}

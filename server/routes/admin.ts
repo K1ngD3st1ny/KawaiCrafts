@@ -6,10 +6,8 @@ import {
   orders,
   insertProductSchema,
   updateProductSchema,
-  loginSchema,
 } from "@shared/schema";
 import { eq, desc, sql, and } from "drizzle-orm";
-import bcrypt from "bcryptjs";
 import { requireAdmin, generateToken } from "../middleware/auth";
 import { productUpload } from "../middleware/upload";
 import { supabase, PRODUCT_BUCKET, THUMBNAIL_BUCKET } from "../supabase";
@@ -17,64 +15,6 @@ import { randomUUID } from "crypto";
 
 const router = Router();
 
-// ─── Admin Login ─────────────────────────────────────────────────────────────
-router.post("/login", async (req: Request, res: Response) => {
-  try {
-    const parsed = loginSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: "Validation failed",
-        details: parsed.error.flatten().fieldErrors,
-      });
-    }
-
-    const { email, password } = parsed.data;
-
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(and(eq(users.email, email.toLowerCase()), eq(users.role, "admin")))
-      .limit(1);
-
-    if (!user) {
-      return res.status(401).json({ error: "Invalid admin credentials" });
-    }
-
-    if (!user.passwordHash) {
-      return res.status(401).json({ error: "Invalid admin credentials" });
-    }
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      return res.status(401).json({ error: "Invalid admin credentials" });
-    }
-
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: "admin",
-    });
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.json({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-      token,
-    });
-  } catch (err: any) {
-    console.error("Admin login error:", err.message);
-    res.status(500).json({ error: "Login failed" });
-  }
-});
 
 // ─── Dashboard Stats ─────────────────────────────────────────────────────────
 router.get("/dashboard", requireAdmin, async (_req: Request, res: Response) => {

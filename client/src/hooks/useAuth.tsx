@@ -22,9 +22,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  adminLogin: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => void;
   logout: () => Promise<void>;
 }
 
@@ -52,32 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     restore();
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await apiRequest("POST", "/api/auth/login", { email, password });
-    const data = await res.json();
-    setUser(data.user);
-  }, []);
-
-  const register = useCallback(
-    async (name: string, email: string, password: string) => {
-      const res = await apiRequest("POST", "/api/auth/register", {
-        name,
-        email,
-        password,
-      });
-      const data = await res.json();
-      setUser(data.user);
-    },
-    []
-  );
-
-  const adminLogin = useCallback(async (email: string, password: string) => {
-    const res = await apiRequest("POST", "/api/admin/login", {
-      email,
-      password,
-    });
-    const data = await res.json();
-    setUser(data.user);
+  const loginWithGoogle = useCallback(() => {
+    window.location.href = "/api/auth/google";
   }, []);
 
   const logout = useCallback(async () => {
@@ -92,9 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         isAdmin: user?.role === "admin",
-        login,
-        register,
-        adminLogin,
+        loginWithGoogle,
         logout,
       }}
     >

@@ -25,7 +25,7 @@ export default function AdminLayout({
 
   useEffect(() => {
     if (!isLoading && !isAdmin) {
-      setLocation("/admin/login");
+      setLocation("/login");
     }
   }, [isAdmin, isLoading, setLocation]);
 
@@ -41,7 +41,7 @@ export default function AdminLayout({
 
   const handleLogout = async () => {
     await logout();
-    setLocation("/admin/login");
+    setLocation("/login");
   };
 
   const navItems = [
