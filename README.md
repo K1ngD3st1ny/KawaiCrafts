@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://kawai-crafts.vercel.app/"><img src="https://img.shields.io/badge/🌸_Visit_Store-kawai--crafts.vercel.app-ff69b4?style=for-the-badge" alt="Visit KawaiCrafts" /></a>
+  <a href="https://kawai-crafts.vercel.app/"><img src="https://img.shields.io/badge/Visit_Store-kawai--crafts.vercel.app-ff69b4?style=for-the-badge" alt="Visit KawaiCrafts" /></a>
 </p>
 
 <p align="center">
@@ -11,11 +11,11 @@
   <img src="https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel" />
 </p>
 
-# ✂️ KawaiCrafts
+# KawaiCrafts
 
 > *Your premier destination for anime papercraft PDFs — bringing your favorite characters to life, one fold at a time.*
 
-🔗 **Live Store:** [**https://kawai-crafts.vercel.app**](https://kawai-crafts.vercel.app/)
+**Live Store:** [**https://kawai-crafts.vercel.app**](https://kawai-crafts.vercel.app/)
 
 **KawaiCrafts** is an online store where anime fans can discover, purchase, and instantly download beautifully designed papercraft PDF templates of their favorite characters. From iconic Naruto shinobi to beloved Dragon Ball heroes — each template is a printable, foldable craft sheet that transforms flat paper into stunning 3D anime figures.
 
@@ -25,9 +25,9 @@ The store is organized by anime series, making it easy to find templates from yo
 
 ---
 
-## ✨ Features
+## Features
 
-### 🛒 Storefront
+### Storefront
 - **Product Catalogue** — Browse papercraft PDFs with search, sort, and filter by anime series
 - **Featured Anime Series** — Curated horizontal carousel with cover images for quick filtering
 - **Shopping Cart** — Persistent cart with `localStorage` syncing and global state management
@@ -35,27 +35,27 @@ The store is organized by anime series, making it easy to find templates from yo
 - **Instant Downloads** — Secure PDF delivery via Supabase Storage after payment
 - **Order History** — Track past purchases and re-download files
 
-### 🔐 Authentication
+### Authentication
 - **Google OAuth** — Seamless sign-in powered by [Arctic](https://arctic.js.org/) (no email/password)
 - **Admin Auto-Assignment** — Admin role granted automatically via `ADMIN_EMAIL` env variable
 - **JWT Sessions** — Stateless auth with HTTP-only cookies
 
-### 💳 Payments
+### Payments
 - **Razorpay Integration** — Full payment flow with order creation and signature verification
 - **INR Currency** — Supports UPI, Visa, Mastercard, Google Pay, Apple Pay, and more
 - **Post-Payment Fulfillment** — Automatic download access + order record creation
 
-### 👤 User Profile
+### User Profile
 - **Extended Profiles** — First/last name, display name, date of birth, gender, phone numbers
 - **Profile Image Upload** — Stored in Supabase public bucket
 - **Address Management** — Multiple addresses with default shipping/billing support
 
-### 🛠️ Admin Dashboard
+### Admin Dashboard
 - **Product Management** — Create, edit, and toggle products with thumbnail/PDF uploads
 - **Series Management** — Manage anime series with cover images and display ordering
 - **Dashboard Analytics** — Overview of products, orders, and revenue (via Recharts)
 
-### 🎨 Design
+### Design
 - **Kawaii Aesthetic** — Pastel pink/lavender palette with neon cyan accents
 - **Responsive Layout** — Mobile-first design with touch-friendly interactions
 - **Micro-Animations** — Hover effects, smooth transitions, and branded loading screen
@@ -63,7 +63,7 @@ The store is organized by anime series, making it easy to find templates from yo
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -82,7 +82,7 @@ The store is organized by anime series, making it easy to find templates from yo
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 KawaiCrafts/
@@ -145,7 +145,7 @@ KawaiCrafts/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -214,7 +214,7 @@ The app will be available at **http://localhost:5000**.
 
 ---
 
-## 📦 Scripts
+## Scripts
 
 | Script | Description |
 |---|---|
@@ -226,7 +226,7 @@ The app will be available at **http://localhost:5000**.
 
 ---
 
-## 🌐 Deployment
+## Deployment
 
 KawaiCrafts is configured for **Vercel** deployment:
 
@@ -241,7 +241,7 @@ The deployment uses:
 
 ---
 
-## 🗄️ Database Schema
+## Database Schema
 
 The PostgreSQL database is managed via Drizzle ORM with the following core tables:
 
@@ -258,19 +258,13 @@ The PostgreSQL database is managed via Drizzle ORM with the following core table
 
 ---
 
-## 🔒 Security
+## Security
 
 - **Google OAuth Only** — No password storage, no password-related attack surface
 - **HMAC-SHA256 Verification** — Razorpay payment signatures are cryptographically verified
 - **JWT HTTP-Only Cookies** — Stateless sessions resistant to XSS
 - **Supabase RLS Bypass** — Server-side only; service role key never exposed to the client
 - **Input Validation** — All endpoints validated with Zod schemas
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
