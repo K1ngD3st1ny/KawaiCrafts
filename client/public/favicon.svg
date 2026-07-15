@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background circle for visibility on all themes -->
+  <circle cx="256" cy="256" r="256" fill="#1a1a2e"/>
+  <!-- Scissors icon from Lucide, rotated 45° to match the navbar branding -->
+  <g transform="translate(256,256) rotate(45) translate(-256,-256)">
+    <g transform="translate(96,96) scale(13.333)">
+      <circle cx="6" cy="6" r="3" fill="none" stroke="#e63e8c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8.12 8.12 12 12" fill="none" stroke="#e63e8c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M20 4 8.12 15.88" fill="none" stroke="#e63e8c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="6" cy="18" r="3" fill="none" stroke="#e63e8c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14.8 14.8 20 20" fill="none" stroke="#e63e8c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>
