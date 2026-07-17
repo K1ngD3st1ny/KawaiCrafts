@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -59,12 +59,7 @@ export default function ProductGrid({
       ? seriesList
       : Array.from(new Set(products.map((p) => p.series))).sort();
 
-  const handleSeriesToggle = (series: string, checked: boolean) => {
-    if (onSeriesFilter) {
-      onSeriesFilter(checked ? series : "");
-    }
-    console.log(`Series filter toggled: ${series} - ${checked}`);
-  };
+
 
   const handleSortChange = (value: string) => {
     if (onSortChange) {
@@ -131,41 +126,29 @@ export default function ProductGrid({
                   <CardTitle className="text-lg">Filter by Series</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {allSeries.map((series) => (
-                      <div
-                        key={series}
-                        className="flex items-center space-x-2"
-                      >
-                        <Checkbox
-                          id={series}
-                          checked={selectedSeries === series}
-                          onCheckedChange={(checked) =>
-                            handleSeriesToggle(series, checked as boolean)
-                          }
-                          data-testid={`checkbox-series-${series.toLowerCase().replace(/\s+/g, "-")}`}
-                        />
-                        <label
-                          htmlFor={series}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  <Select
+                    value={selectedSeries || "all"}
+                    onValueChange={(value) => {
+                      if (onSeriesFilter) {
+                        onSeriesFilter(value === "all" ? "" : value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger data-testid="select-series">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Series</SelectItem>
+                      {allSeries.map((series) => (
+                        <SelectItem
+                          key={series}
+                          value={series}
                         >
                           {series}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-
-                  {selectedSeries && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleClearFilters}
-                      className="w-full mt-4"
-                      data-testid="button-clear-filters"
-                    >
-                      Clear Filters
-                    </Button>
-                  )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </CardContent>
               </Card>
             </div>
