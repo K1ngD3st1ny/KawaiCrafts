@@ -92,42 +92,46 @@ export default function Header({ onCartClick, onSearchSubmit }: HeaderProps) {
           <div className="hidden md:flex items-center gap-4">
 
             {/* Wishlist */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              onClick={() => setLocation("/wishlist")}
-              data-testid="button-wishlist"
-            >
-              <Heart className="h-5 w-5" />
+            <div className="relative flex items-center justify-center h-9 w-9">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => setLocation("/wishlist")}
+                data-testid="button-wishlist"
+              >
+                <Heart className="h-5 w-5" />
+              </Button>
               {wishlist.length > 0 && (
                 <Badge 
-                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 hover:bg-red-600"
+                  className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 flex items-center justify-center px-1 py-0 text-[10px] leading-none rounded-full bg-red-500 hover:bg-red-600 border-2 border-background pointer-events-none"
                   data-testid="badge-wishlist-count"
                 >
-                  {wishlist.length}
+                  {wishlist.length > 99 ? "99+" : wishlist.length}
                 </Badge>
               )}
-            </Button>
+            </div>
 
             {/* Cart */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              onClick={handleCartClick}
-              data-testid="button-cart"
-            >
-              <ShoppingCart className="h-5 w-5" />
+            <div className="relative flex items-center justify-center h-9 w-9">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleCartClick}
+                data-testid="button-cart"
+              >
+                <ShoppingCart className="h-5 w-5" />
+              </Button>
               {cart.totalItems > 0 && (
                 <Badge 
-                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary"
+                  className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 flex items-center justify-center px-1 py-0 text-[10px] leading-none rounded-full bg-primary border-2 border-background pointer-events-none"
                   data-testid="badge-cart-count"
                 >
-                  {cart.totalItems}
+                  {cart.totalItems > 99 ? "99+" : cart.totalItems}
                 </Badge>
               )}
-            </Button>
+            </div>
 
             {/* Auth - Logged In */}
             {isAuthenticated && user ? (
