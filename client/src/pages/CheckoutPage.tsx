@@ -54,6 +54,22 @@ export default function CheckoutPage() {
   const [isComplete, setIsComplete] = useState(false);
   const [purchasedItems, setPurchasedItems] = useState<{ id: string; title: string; price: number }[]>([]);
   const [paymentDetails, setPaymentDetails] = useState<{ paymentId: string; orderId: string } | null>(null);
+  const [buyNowItem, setBuyNowItem] = useState<any>(null);
+
+  useEffect(() => {
+    const item = sessionStorage.getItem("buyNowItem");
+    if (item) {
+      try {
+        setBuyNowItem(JSON.parse(item));
+      } catch (e) {
+        console.error("Failed to parse buyNowItem", e);
+      }
+    }
+  }, []);
+
+  const itemsToCheckout = buyNowItem ? [buyNowItem] : cart.cartItems;
+  const subtotalToCheckout = buyNowItem ? buyNowItem.price * buyNowItem.quantity : cart.subtotal;
+  const totalItemsToCheckout = buyNowItem ? buyNowItem.quantity : cart.totalItems;
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -76,7 +92,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (cart.subtotal <= 0) {
+    if (subtotalToCheckout <= 0) {
       toast({ title: "Cart is empty", description: "Add items to your cart before checking out.", variant: "destructive" });
       return;
     }
@@ -89,7 +105,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ amount: cart.subtotal }),
+        body: JSON.stringify({ amount: subtotalToCheckout }),
       });
 
       if (!orderRes.ok) {
@@ -105,7 +121,7 @@ export default function CheckoutPage() {
         amount,
         currency,
         name: "KawaiCraft",
-        description: `${cart.totalItems} papercraft PDF${cart.totalItems > 1 ? "s" : ""}`,
+        description: `${totalItemsToCheckout} papercraft PDF${totalItemsToCheckout > 1 ? "s" : ""}`,
         order_id: orderId,
         prefill: {
           name: user?.name || "",
@@ -125,8 +141,8 @@ export default function CheckoutPage() {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                items: cart.cartItems,
-                totalAmount: cart.subtotal,
+                items: itemsToCheckout,
+                totalAmount: subtotalToCheckout,
               }),
             });
 
@@ -140,7 +156,7 @@ export default function CheckoutPage() {
             if (verifyData.verified) {
               // Payment verified — show success
               setPurchasedItems(
-                cart.cartItems.map((item) => ({
+                itemsToCheckout.map((item: any) => ({
                   id: item.id,
                   title: item.title,
                   price: item.price * item.quantity,
@@ -151,7 +167,14 @@ export default function CheckoutPage() {
                 orderId: response.razorpay_order_id,
               });
               setIsComplete(true);
-              cart.clearCart();
+              
+              if (buyNowItem) {
+                sessionStorage.removeItem("buyNowItem");
+                setBuyNowItem(null);
+              } else {
+                cart.clearCart();
+              }
+              
               toast({ title: "Payment successful! 🎉", description: "Your papercraft PDFs are ready for download." });
             } else {
               throw new Error("Payment could not be verified");
@@ -204,6 +227,11 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleBackToShop = () => {
+    sessionStorage.removeItem("buyNowItem");
+    setLocation("/");
+  };
+
   // ── Success screen ─────────────────────────────────────────────────
   if (isComplete) {
     return (
@@ -248,7 +276,7 @@ export default function CheckoutPage() {
             <div className="pt-6 border-t">
               <Button
                 variant="outline"
-                onClick={() => setLocation("/")}
+                onClick={handleBackToShop}
                 className="w-full"
                 data-testid="button-continue-shopping"
               >
@@ -262,13 +290,13 @@ export default function CheckoutPage() {
   }
 
   // ── Empty cart ──────────────────────────────────────────────────────
-  if (cart.cartItems.length === 0 && !isComplete) {
+  if (itemsToCheckout.length === 0 && !isComplete) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
-            onClick={() => setLocation("/")}
+            onClick={handleBackToShop}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -283,7 +311,7 @@ export default function CheckoutPage() {
             <p className="text-muted-foreground max-w-md mx-auto mb-8">
               Add some amazing papercraft to your cart before checking out!
             </p>
-            <Button size="lg" onClick={() => setLocation("/")}>
+            <Button size="lg" onClick={handleBackToShop}>
               Browse Products
             </Button>
           </div>
@@ -299,7 +327,7 @@ export default function CheckoutPage() {
         <div className="mb-6">
           <Button
             variant="ghost"
-            onClick={() => setLocation("/")}
+            onClick={handleBackToShop}
             className="mb-4"
             data-testid="button-back-to-shop"
           >
@@ -318,7 +346,7 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {cart.cartItems.map((item) => (
+                {itemsToCheckout.map((item: any) => (
                   <div key={item.id} className="flex justify-between items-center py-2">
                     <div>
                       <span className="font-medium">{item.title}</span>
@@ -333,7 +361,7 @@ export default function CheckoutPage() {
                   <div className="flex justify-between items-center text-lg font-bold">
                     <span>Total:</span>
                     <span className="text-primary" data-testid="text-checkout-total">
-                      {formatPrice(cart.subtotal)}
+                      {formatPrice(subtotalToCheckout)}
                     </span>
                   </div>
                 </div>
@@ -399,7 +427,7 @@ export default function CheckoutPage() {
                     </>
                   ) : (
                     <>
-                      Pay {formatPrice(cart.subtotal)} with Razorpay
+                      Pay {formatPrice(subtotalToCheckout)} with Razorpay
                     </>
                   )}
                 </Button>

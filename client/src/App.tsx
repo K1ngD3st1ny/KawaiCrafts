@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import LoadingScreen from "@/components/LoadingScreen";
 import HomePage from "@/pages/HomePage";
+import ProductDetailsPage from "@/pages/ProductDetailsPage";
 import CheckoutPage from "@/pages/CheckoutPage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
@@ -26,6 +27,7 @@ function Router() {
     <Switch>
       {/* Public routes */}
       <Route path="/" component={HomePage} />
+      <Route path="/product/:slug" component={ProductDetailsPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
 

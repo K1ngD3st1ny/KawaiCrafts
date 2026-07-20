@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { db } from "../db";
-import { products } from "@shared/schema";
-import { eq, and, ilike, or, desc, asc, sql } from "drizzle-orm";
+import { products, productImages } from "@shared/schema";
+import { eq, and, ilike, or, desc, asc, sql, ne } from "drizzle-orm";
 
 const router = Router();
 
@@ -106,6 +106,9 @@ router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    // Check if the id is a valid UUID
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
+
     // Try by ID first, then by slug
     const [product] = await db
       .select()
@@ -113,7 +116,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       .where(
         and(
           eq(products.active, true),
-          or(eq(products.id, id), eq(products.slug, id))
+          isUuid ? or(eq(products.id, id), eq(products.slug, id)) : eq(products.slug, id)
         )
       )
       .limit(1);
@@ -122,10 +125,79 @@ router.get("/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    res.json({ product });
+    const images = await db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.productId, product.id))
+      .orderBy(asc(productImages.displayOrder));
+
+    res.json({ product, productImages: images });
   } catch (err: any) {
     console.error("Get product error:", err.message);
     res.status(500).json({ error: "Failed to fetch product" });
+  }
+});
+
+// GET /api/products/:id/recommended — get recommended products
+router.get("/:id/recommended", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Check if the id is a valid UUID
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
+
+    // Try by ID first, then by slug to find the current product
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(
+        and(
+          eq(products.active, true),
+          isUuid ? or(eq(products.id, id), eq(products.slug, id)) : eq(products.slug, id)
+        )
+      )
+      .limit(1);
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Find recommended: same series first, exclude current
+    let recommended = await db
+      .select()
+      .from(products)
+      .where(
+        and(
+          eq(products.active, true),
+          eq(products.animeSeries, product.animeSeries),
+          ne(products.id, product.id)
+        )
+      )
+      .orderBy(desc(products.popularity))
+      .limit(8);
+
+    // If we don't have enough from the same series, pad with other popular products
+    if (recommended.length < 4) {
+      const more = await db
+        .select()
+        .from(products)
+        .where(
+          and(
+            eq(products.active, true),
+            ne(products.id, product.id),
+            ne(products.animeSeries, product.animeSeries)
+          )
+        )
+        .orderBy(desc(products.popularity))
+        .limit(8 - recommended.length);
+      recommended = [...recommended, ...more];
+    }
+
+    // Return at most 8 recommendations (could be 4-8 based on availability, up to 8 limit)
+    res.json({ recommended });
+  } catch (err: any) {
+    console.error("Get recommended products error:", err.message);
+    res.status(500).json({ error: "Failed to fetch recommended products" });
   }
 });
 

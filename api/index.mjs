@@ -33,10 +33,12 @@ __export(schema_exports, {
   insertDownloadSchema: () => insertDownloadSchema,
   insertOrderItemSchema: () => insertOrderItemSchema,
   insertOrderSchema: () => insertOrderSchema,
+  insertProductImageSchema: () => insertProductImageSchema,
   insertProductSchema: () => insertProductSchema,
   insertWishlistSchema: () => insertWishlistSchema,
   orderItems: () => orderItems,
   orders: () => orders,
+  productImages: () => productImages,
   products: () => products,
   updateAddressSchema: () => updateAddressSchema,
   updateAnimeSeriesSchema: () => updateAnimeSeriesSchema,
@@ -183,6 +185,27 @@ var insertProductSchema = createInsertSchema(products).omit({
   updatedAt: true
 });
 var updateProductSchema = insertProductSchema.partial();
+var productImages = pgTable(
+  "product_images",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+    imageUrl: text("image_url").notNull(),
+    displayOrder: integer("display_order").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (table) => [
+    index("idx_product_images_product_id").on(table.productId),
+    index("idx_product_images_display_order").on(
+      table.productId,
+      table.displayOrder
+    )
+  ]
+);
+var insertProductImageSchema = createInsertSchema(productImages).omit({
+  id: true,
+  createdAt: true
+});
 var orders = pgTable(
   "orders",
   {
@@ -499,6 +522,24 @@ var seriesImageMulter = multer({
   // 5 MB
 });
 var seriesImageUpload = seriesImageMulter.single("image");
+var galleryImageMulter = multer({
+  storage,
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new Error(
+          "Only PNG, JPG, and WebP images are allowed for gallery images."
+        )
+      );
+    }
+  },
+  limits: { fileSize: 10 * 1024 * 1024, files: 10 }
+  // 10 MB per file, 10 files max
+});
+var galleryImageUpload = galleryImageMulter.array("images", 10);
 
 // server/supabase.ts
 import { createClient } from "@supabase/supabase-js";
@@ -517,12 +558,14 @@ var PRODUCT_BUCKET = "product_pdfs";
 var THUMBNAIL_BUCKET = "product_thumbnails";
 var PROFILE_BUCKET = "profile_images";
 var SERIES_BUCKET = "series_images";
+var GALLERY_BUCKET = "product_gallery";
 async function ensureBuckets() {
   const buckets = [
     { name: PRODUCT_BUCKET, public: false },
     { name: THUMBNAIL_BUCKET, public: true },
     { name: PROFILE_BUCKET, public: true },
-    { name: SERIES_BUCKET, public: true }
+    { name: SERIES_BUCKET, public: true },
+    { name: GALLERY_BUCKET, public: true }
   ];
   for (const bucket of buckets) {
     const { data, error } = await supabase.storage.getBucket(bucket.name);
@@ -757,7 +800,7 @@ var profile_default = router2;
 
 // server/routes/products.ts
 import { Router as Router3 } from "express";
-import { eq as eq3, and as and2, ilike, or, desc, asc, sql } from "drizzle-orm";
+import { eq as eq3, and as and2, ilike, or, desc, asc, sql, ne } from "drizzle-orm";
 var router3 = Router3();
 router3.get("/", async (req, res) => {
   try {
@@ -837,17 +880,53 @@ router3.get("/:id", async (req, res) => {
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
     }
-    res.json({ product });
+    const images = await db.select().from(productImages).where(eq3(productImages.productId, product.id)).orderBy(asc(productImages.displayOrder));
+    res.json({ product, productImages: images });
   } catch (err) {
     console.error("Get product error:", err.message);
     res.status(500).json({ error: "Failed to fetch product" });
+  }
+});
+router3.get("/:id/recommended", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [product] = await db.select().from(products).where(
+      and2(
+        eq3(products.active, true),
+        or(eq3(products.id, id), eq3(products.slug, id))
+      )
+    ).limit(1);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    let recommended = await db.select().from(products).where(
+      and2(
+        eq3(products.active, true),
+        eq3(products.animeSeries, product.animeSeries),
+        ne(products.id, product.id)
+      )
+    ).orderBy(desc(products.popularity)).limit(8);
+    if (recommended.length < 4) {
+      const more = await db.select().from(products).where(
+        and2(
+          eq3(products.active, true),
+          ne(products.id, product.id),
+          ne(products.animeSeries, product.animeSeries)
+        )
+      ).orderBy(desc(products.popularity)).limit(8 - recommended.length);
+      recommended = [...recommended, ...more];
+    }
+    res.json({ recommended });
+  } catch (err) {
+    console.error("Get recommended products error:", err.message);
+    res.status(500).json({ error: "Failed to fetch recommended products" });
   }
 });
 var products_default = router3;
 
 // server/routes/admin.ts
 import { Router as Router4 } from "express";
-import { eq as eq4, desc as desc2, sql as sql2 } from "drizzle-orm";
+import { eq as eq4, desc as desc2, sql as sql2, and as and3 } from "drizzle-orm";
 import { randomUUID } from "crypto";
 var router4 = Router4();
 router4.get("/dashboard", requireAdmin, async (_req, res) => {
@@ -1059,11 +1138,128 @@ router4.delete(
         } catch {
         }
       }
+      const gallery = await db.select().from(productImages).where(eq4(productImages.productId, id));
+      if (gallery.length > 0) {
+        const fileNames = gallery.map((img) => img.imageUrl.split("/").pop()).filter((name) => !!name);
+        if (fileNames.length > 0) {
+          try {
+            await supabase.storage.from(GALLERY_BUCKET).remove(fileNames);
+          } catch {
+          }
+        }
+      }
       await db.delete(products).where(eq4(products.id, id));
       res.json({ message: "Product deleted successfully" });
     } catch (err) {
       console.error("Delete product error:", err.message);
       res.status(500).json({ error: "Failed to delete product" });
+    }
+  }
+);
+router4.post(
+  "/products/:id/images",
+  requireAdmin,
+  galleryImageUpload,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const files = req.files;
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files provided" });
+      }
+      const [existing] = await db.select().from(products).where(eq4(products.id, id)).limit(1);
+      if (!existing) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      const currentImages = await db.select({ displayOrder: productImages.displayOrder }).from(productImages).where(eq4(productImages.productId, id));
+      let nextOrder = currentImages.length > 0 ? Math.max(...currentImages.map((i) => i.displayOrder)) + 1 : 0;
+      const insertedImages = [];
+      for (const file of files) {
+        const ext = file.originalname.split(".").pop();
+        const fileName = `${randomUUID()}.${ext}`;
+        const { error } = await supabase.storage.from(GALLERY_BUCKET).upload(fileName, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false
+        });
+        if (error) {
+          console.error("Gallery upload error:", error.message);
+          continue;
+        }
+        const {
+          data: { publicUrl }
+        } = supabase.storage.from(GALLERY_BUCKET).getPublicUrl(fileName);
+        const [newImage] = await db.insert(productImages).values({
+          productId: id,
+          imageUrl: publicUrl,
+          displayOrder: nextOrder++
+        }).returning();
+        insertedImages.push(newImage);
+      }
+      res.status(201).json({ images: insertedImages });
+    } catch (err) {
+      console.error("Upload gallery images error:", err.message);
+      res.status(500).json({ error: "Failed to upload images" });
+    }
+  }
+);
+router4.delete(
+  "/products/:id/images/:imageId",
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { id, imageId } = req.params;
+      const [existing] = await db.select().from(productImages).where(
+        and3(
+          eq4(productImages.id, imageId),
+          eq4(productImages.productId, id)
+        )
+      ).limit(1);
+      if (!existing) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      try {
+        const fileName = existing.imageUrl.split("/").pop();
+        if (fileName) {
+          await supabase.storage.from(GALLERY_BUCKET).remove([fileName]);
+        }
+      } catch {
+      }
+      await db.delete(productImages).where(eq4(productImages.id, imageId));
+      res.json({ message: "Image deleted successfully" });
+    } catch (err) {
+      console.error("Delete gallery image error:", err.message);
+      res.status(500).json({ error: "Failed to delete image" });
+    }
+  }
+);
+router4.put(
+  "/products/:id/images/reorder",
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { imageIds } = req.body;
+      if (!Array.isArray(imageIds)) {
+        return res.status(400).json({ error: "imageIds must be an array" });
+      }
+      const [product] = await db.select().from(products).where(eq4(products.id, id)).limit(1);
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      await Promise.all(
+        imageIds.map(
+          (imageId, index2) => db.update(productImages).set({ displayOrder: index2 }).where(
+            and3(
+              eq4(productImages.id, imageId),
+              eq4(productImages.productId, id)
+            )
+          )
+        )
+      );
+      res.json({ message: "Images reordered successfully" });
+    } catch (err) {
+      console.error("Reorder gallery images error:", err.message);
+      res.status(500).json({ error: "Failed to reorder images" });
     }
   }
 );

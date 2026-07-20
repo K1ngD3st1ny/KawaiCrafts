@@ -14,6 +14,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 interface Product {
   id: string;
   title: string;
+  slug?: string;
   series: string;
   price: number;
   imageUrl: string;

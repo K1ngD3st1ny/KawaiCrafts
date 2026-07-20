@@ -22,7 +22,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, Image, FileText, X } from "lucide-react";
+import { ArrowLeft, Upload, Image, FileText, X, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+
+interface GalleryImage {
+  id: string;
+  imageUrl: string;
+  displayOrder: number;
+}
 
 export default function AdminProductForm() {
   const [, params] = useRoute("/admin/products/edit/:id");
@@ -56,6 +62,10 @@ export default function AdminProductForm() {
 
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
 
   // Load existing product in edit mode
   useEffect(() => {
@@ -83,6 +93,16 @@ export default function AdminProductForm() {
         })
         .catch(console.error)
         .finally(() => setIsLoadingProduct(false));
+        
+      // Fetch gallery images
+      fetch(`/api/products/${productId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.productImages) {
+            setGalleryImages(data.productImages);
+          }
+        })
+        .catch(console.error);
     }
   }, [isEdit, productId]);
 
@@ -98,6 +118,80 @@ export default function AdminProductForm() {
     const file = e.target.files?.[0];
     if (file) {
       setPdfFile(file);
+    }
+  };
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !productId) return;
+
+    setIsUploadingGallery(true);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((file) => {
+        formData.append("images", file);
+      });
+
+      const res = await fetch(`/api/admin/products/${productId}/images`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Failed to upload images");
+
+      const data = await res.json();
+      setGalleryImages((prev) => [...prev, ...data.images].sort((a, b) => a.displayOrder - b.displayOrder));
+      
+      toast({ title: "Images Uploaded", description: `Added ${data.images.length} images to gallery.` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsUploadingGallery(false);
+      if (galleryInputRef.current) galleryInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteGalleryImage = async (imageId: string) => {
+    if (!confirm("Delete this image?")) return;
+    
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/images/${imageId}`, {
+        method: "DELETE",
+      });
+      
+      if (!res.ok) throw new Error("Failed to delete image");
+      
+      setGalleryImages((prev) => prev.filter((img) => img.id !== imageId));
+      toast({ title: "Image Deleted" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleMoveGalleryImage = async (index: number, direction: 'up' | 'down') => {
+    if (
+      (direction === 'up' && index === 0) || 
+      (direction === 'down' && index === galleryImages.length - 1)
+    ) return;
+
+    const newImages = [...galleryImages];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Swap
+    [newImages[index], newImages[swapIndex]] = [newImages[swapIndex], newImages[index]];
+    setGalleryImages(newImages);
+
+    // Sync with server
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/images/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageIds: newImages.map(img => img.id) }),
+      });
+      
+      if (!res.ok) throw new Error("Failed to reorder images");
+    } catch (err: any) {
+      toast({ title: "Error reordering", description: err.message, variant: "destructive" });
     }
   };
 
@@ -313,6 +407,85 @@ export default function AdminProductForm() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Gallery Images (Edit Mode Only) */}
+          {isEdit && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Gallery Images</CardTitle>
+                <CardDescription>
+                  Manage additional product images. Drag/use arrows to reorder.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  {galleryImages.map((img, index) => (
+                    <div key={img.id} className="relative group aspect-square rounded-md overflow-hidden border bg-muted">
+                      <img src={img.imageUrl} alt="Gallery" className="w-full h-full object-cover" />
+                      
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+                        <div className="flex justify-between">
+                          <Button 
+                            type="button" 
+                            variant="secondary" 
+                            size="icon" 
+                            className="h-7 w-7 bg-background/80 hover:bg-background"
+                            disabled={index === 0}
+                            onClick={() => handleMoveGalleryImage(index, 'up')}
+                          >
+                            <ArrowLeft className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="secondary" 
+                            size="icon" 
+                            className="h-7 w-7 bg-background/80 hover:bg-background"
+                            disabled={index === galleryImages.length - 1}
+                            onClick={() => handleMoveGalleryImage(index, 'down')}
+                          >
+                            <ArrowLeft className="h-4 w-4 rotate-180" />
+                          </Button>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="h-8 w-8 self-end"
+                          onClick={() => handleDeleteGalleryImage(img.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Upload New Gallery Image */}
+                  <div 
+                    className="aspect-square border-2 border-dashed rounded-md flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors bg-muted/30"
+                    onClick={() => galleryInputRef.current?.click()}
+                  >
+                    {isUploadingGallery ? (
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                        <span className="text-xs text-muted-foreground">Add Images</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  onChange={handleGalleryUpload}
+                  className="hidden"
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Product Details */}
           <Card>

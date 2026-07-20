@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { db } from "../db";
 import {
   products,
+  productImages,
   users,
   orders,
   insertProductSchema,
@@ -9,8 +10,8 @@ import {
 } from "@shared/schema";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { requireAdmin, generateToken } from "../middleware/auth";
-import { productUpload } from "../middleware/upload";
-import { supabase, PRODUCT_BUCKET, THUMBNAIL_BUCKET } from "../supabase";
+import { productUpload, galleryImageUpload } from "../middleware/upload";
+import { supabase, PRODUCT_BUCKET, THUMBNAIL_BUCKET, GALLERY_BUCKET } from "../supabase";
 import { randomUUID } from "crypto";
 
 const router = Router();
@@ -96,9 +97,22 @@ router.post(
         active: req.body.active === "true" || req.body.active === true,
       };
 
-      // Generate slug from title
+      const TITLE_SUFFIX = " – PRINTABLE PAPER 3D FIGURE";
+
+      // Auto-append title suffix
+      if (body.title && typeof body.title === "string" && !body.title.endsWith(TITLE_SUFFIX)) {
+        body.title = `${body.title}${TITLE_SUFFIX}`;
+      }
+
+      // Auto-generate description if missing
+      if (!body.description && body.characterName && body.animeSeries) {
+        body.description = `Unleash the spirit of ${body.characterName.trim()} with this DIY papercraft! Designed with their signature look from ${body.animeSeries.trim()}, this 3D figure captures their unique energy. Just download the PDF, print it on A4 paper, cut, fold, and glue to bring ${body.characterName.trim()} to life. Perfect for display, collecting, or gifting to any ${body.animeSeries.trim()} fan!`;
+      }
+
+      // Generate slug from title (ignoring suffix for cleaner URLs)
       if (body.title && !body.slug) {
-        body.slug = body.title
+        const titleForSlug = body.title.replace(TITLE_SUFFIX, "");
+        body.slug = titleForSlug
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-|-$/g, "");
@@ -214,9 +228,22 @@ router.put(
       if (body.active !== undefined)
         body.active = body.active === "true" || body.active === true;
 
-      // Auto-generate slug from title if title changed
+      const TITLE_SUFFIX = " – PRINTABLE PAPER 3D FIGURE";
+
+      // Auto-append title suffix
+      if (body.title && typeof body.title === "string" && !body.title.endsWith(TITLE_SUFFIX)) {
+        body.title = `${body.title}${TITLE_SUFFIX}`;
+      }
+
+      // Auto-generate description if missing
+      if (body.description !== undefined && !body.description && body.characterName && body.animeSeries) {
+        body.description = `Unleash the spirit of ${body.characterName.trim()} with this DIY papercraft! Designed with their signature look from ${body.animeSeries.trim()}, this 3D figure captures their unique energy. Just download the PDF, print it on A4 paper, cut, fold, and glue to bring ${body.characterName.trim()} to life. Perfect for display, collecting, or gifting to any ${body.animeSeries.trim()} fan!`;
+      }
+
+      // Auto-generate slug from title if title changed (ignoring suffix for cleaner URLs)
       if (body.title && !body.slug) {
-        body.slug = body.title
+        const titleForSlug = body.title.replace(TITLE_SUFFIX, "");
+        body.slug = titleForSlug
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-|-$/g, "");
@@ -355,6 +382,26 @@ router.delete(
         }
       }
 
+      // Get all associated gallery images
+      const gallery = await db
+        .select()
+        .from(productImages)
+        .where(eq(productImages.productId, id));
+
+      if (gallery.length > 0) {
+        const fileNames = gallery
+          .map((img) => img.imageUrl.split("/").pop())
+          .filter((name): name is string => !!name);
+
+        if (fileNames.length > 0) {
+          try {
+            await supabase.storage.from(GALLERY_BUCKET).remove(fileNames);
+          } catch {
+            // Non-critical
+          }
+        }
+      }
+
       // Delete from database
       await db.delete(products).where(eq(products.id, id));
 
@@ -362,6 +409,171 @@ router.delete(
     } catch (err: any) {
       console.error("Delete product error:", err.message);
       res.status(500).json({ error: "Failed to delete product" });
+    }
+  }
+);
+
+// ─── Gallery Images ──────────────────────────────────────────────────────────
+
+router.post(
+  "/products/:id/images",
+  requireAdmin,
+  galleryImageUpload,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const files = req.files as Express.Multer.File[];
+
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files provided" });
+      }
+
+      // Check product exists
+      const [existing] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, id))
+        .limit(1);
+
+      if (!existing) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      // Get current max display order
+      const currentImages = await db
+        .select({ displayOrder: productImages.displayOrder })
+        .from(productImages)
+        .where(eq(productImages.productId, id));
+
+      let nextOrder = currentImages.length > 0
+        ? Math.max(...currentImages.map((i) => i.displayOrder)) + 1
+        : 0;
+
+      const insertedImages = [];
+
+      for (const file of files) {
+        const ext = file.originalname.split(".").pop();
+        const fileName = `${randomUUID()}.${ext}`;
+
+        const { error } = await supabase.storage
+          .from(GALLERY_BUCKET)
+          .upload(fileName, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          });
+
+        if (error) {
+          console.error("Gallery upload error:", error.message);
+          continue; // Skip failed uploads
+        }
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from(GALLERY_BUCKET).getPublicUrl(fileName);
+
+        const [newImage] = await db
+          .insert(productImages)
+          .values({
+            productId: id,
+            imageUrl: publicUrl,
+            displayOrder: nextOrder++,
+          })
+          .returning();
+
+        insertedImages.push(newImage);
+      }
+
+      res.status(201).json({ images: insertedImages });
+    } catch (err: any) {
+      console.error("Upload gallery images error:", err.message);
+      res.status(500).json({ error: "Failed to upload images" });
+    }
+  }
+);
+
+router.delete(
+  "/products/:id/images/:imageId",
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { id, imageId } = req.params;
+
+      const [existing] = await db
+        .select()
+        .from(productImages)
+        .where(
+          and(
+            eq(productImages.id, imageId),
+            eq(productImages.productId, id)
+          )
+        )
+        .limit(1);
+
+      if (!existing) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+
+      try {
+        const fileName = existing.imageUrl.split("/").pop();
+        if (fileName) {
+          await supabase.storage.from(GALLERY_BUCKET).remove([fileName]);
+        }
+      } catch {
+        // Non-critical
+      }
+
+      await db.delete(productImages).where(eq(productImages.id, imageId));
+
+      res.json({ message: "Image deleted successfully" });
+    } catch (err: any) {
+      console.error("Delete gallery image error:", err.message);
+      res.status(500).json({ error: "Failed to delete image" });
+    }
+  }
+);
+
+router.put(
+  "/products/:id/images/reorder",
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { imageIds } = req.body;
+
+      if (!Array.isArray(imageIds)) {
+        return res.status(400).json({ error: "imageIds must be an array" });
+      }
+
+      // Validate product
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, id))
+        .limit(1);
+
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      // Update in parallel (could be optimized with a single transaction or case statement)
+      await Promise.all(
+        imageIds.map((imageId, index) =>
+          db
+            .update(productImages)
+            .set({ displayOrder: index })
+            .where(
+              and(
+                eq(productImages.id, imageId),
+                eq(productImages.productId, id)
+              )
+            )
+        )
+      );
+
+      res.json({ message: "Images reordered successfully" });
+    } catch (err: any) {
+      console.error("Reorder gallery images error:", err.message);
+      res.status(500).json({ error: "Failed to reorder images" });
     }
   }
 );

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { formatPrice } from "@/lib/currency";
 import { Plus, ShoppingCart, Package, Heart } from "lucide-react";
 import { motion } from "framer-motion";
@@ -12,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 interface ProductCardProps {
   id: string;
   title: string;
+  slug?: string;
   series: string;
   price: number;
   imageUrl: string;
@@ -21,6 +23,7 @@ interface ProductCardProps {
 export default function ProductCard({ 
   id, 
   title, 
+  slug,
   series, 
   price, 
   imageUrl, 
@@ -31,6 +34,7 @@ export default function ProductCard({
   const { toggleWishlist, addToWishlist, removeFromWishlist } = useWishlistMutations();
   const cart = useCart();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const isWishlisted = wishlist.some((item) => item.productId === id);
   const isWishlistLoading = addToWishlist.isPending || removeFromWishlist.isPending;
@@ -41,7 +45,11 @@ export default function ProductCard({
     toggleWishlist(id, isWishlisted);
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (isAdding) return; // Prevent duplicate clicks
 
     setIsAdding(true);
@@ -86,8 +94,9 @@ export default function ProductCard({
 
   return (
     <Card 
-      className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 hover-elevate"
+      className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 hover-elevate cursor-pointer"
       data-testid={`card-product-${id}`}
+      onClick={() => setLocation(`/product/${slug || id}`)}
     >
       <CardContent className="p-0">
         {/* Image Container */}

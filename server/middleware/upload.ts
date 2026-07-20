@@ -72,3 +72,23 @@ const seriesImageMulter = multer({
 });
 
 export const seriesImageUpload = seriesImageMulter.single("image");
+
+// Gallery image upload — images only, 10 MB max per file, up to 10 files
+const galleryImageMulter = multer({
+  storage,
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new Error(
+          "Only PNG, JPG, and WebP images are allowed for gallery images."
+        )
+      );
+    }
+  },
+  limits: { fileSize: 10 * 1024 * 1024, files: 10 }, // 10 MB per file, 10 files max
+});
+
+export const galleryImageUpload = galleryImageMulter.array("images", 10);

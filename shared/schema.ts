@@ -186,6 +186,36 @@ export const updateProductSchema = insertProductSchema.partial();
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
 
+// ─── Product Images (Gallery) ────────────────────────────────────────────────
+
+export const productImages = pgTable(
+  "product_images",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    imageUrl: text("image_url").notNull(),
+    displayOrder: integer("display_order").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_product_images_product_id").on(table.productId),
+    index("idx_product_images_display_order").on(
+      table.productId,
+      table.displayOrder
+    ),
+  ]
+);
+
+export const insertProductImageSchema = createInsertSchema(productImages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertProductImage = z.infer<typeof insertProductImageSchema>;
+export type ProductImage = typeof productImages.$inferSelect;
+
 // ─── Orders ──────────────────────────────────────────────────────────────────
 
 export const orders = pgTable(

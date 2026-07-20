@@ -28,6 +28,9 @@ export const PROFILE_BUCKET = "profile_images";
 // The bucket name where anime series cover images are stored (public)
 export const SERIES_BUCKET = "series_images";
 
+// The bucket name where additional product gallery images are stored (public)
+export const GALLERY_BUCKET = "product_gallery";
+
 // Ensure required storage buckets exist (creates them if missing)
 export async function ensureBuckets() {
   const buckets = [
@@ -35,6 +38,7 @@ export async function ensureBuckets() {
     { name: THUMBNAIL_BUCKET, public: true },
     { name: PROFILE_BUCKET, public: true },
     { name: SERIES_BUCKET, public: true },
+    { name: GALLERY_BUCKET, public: true },
   ];
 
   for (const bucket of buckets) {
