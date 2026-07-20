@@ -145,7 +145,7 @@ export default function ProductDetailsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
       <Header onCartClick={() => cart.setIsCartOpen(true)} />
 
       <main className="flex-1">
@@ -171,17 +171,17 @@ export default function ProductDetailsPage() {
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
             
             {/* Left: Gallery */}
-            <div className="space-y-4 lg:w-10/12 xl:w-4/5 mx-auto w-full">
+            <div className="space-y-4 lg:w-10/12 xl:w-4/5 mx-auto w-full min-w-0">
               <ImageGallery images={allImages} productName={product.title} />
             </div>
 
             {/* Right: Info */}
-            <div className="flex flex-col space-y-6">
+            <div className="flex flex-col space-y-6 min-w-0">
               <div>
                 <Badge className={`mb-4 ${getSeriesColor(product.animeSeries)}`}>
                   {product.animeSeries}
                 </Badge>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-2">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-2 break-words">
                   {product.title}
                 </h1>
                 
@@ -191,34 +191,34 @@ export default function ProductDetailsPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-4 pt-4 border-t">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 pt-4 border-t w-full">
                 <Button 
                   size="lg" 
                   variant="outline"
-                  className="flex-1 rounded-full text-base font-semibold"
+                  className="flex-1 min-w-[140px] rounded-full text-sm sm:text-base font-semibold px-3 sm:px-4"
                   onClick={handleAddToCart}
                 >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  Add to Cart
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 flex-shrink-0" />
+                  <span className="truncate">Add to Cart</span>
                 </Button>
                 <Button 
                   size="lg" 
-                  className="flex-1 rounded-full text-base font-semibold"
+                  className="flex-1 min-w-[140px] rounded-full text-sm sm:text-base font-semibold px-3 sm:px-4"
                   onClick={handleBuyNow}
                 >
-                  Buy Now
+                  <span className="truncate">Buy Now</span>
                 </Button>
                 <Button 
                   size="lg" 
                   variant="outline" 
-                  className={`rounded-full w-14 p-0 flex-shrink-0 border-2 ${isWishlisted ? "border-red-500 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20" : ""}`}
+                  className={`rounded-full w-12 sm:w-14 h-11 sm:h-11 p-0 flex-shrink-0 border-2 ${isWishlisted ? "border-red-500 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20" : ""}`}
                   onClick={() => toggleWishlist(product.id, isWishlisted)}
                   disabled={isWishlistLoading}
                 >
                   {isWishlistLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                   ) : (
-                    <Heart className={`w-6 h-6 transition-colors ${isWishlisted ? "fill-red-500 text-red-500" : ""}`} />
+                    <Heart className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${isWishlisted ? "fill-red-500 text-red-500" : ""}`} />
                   )}
                 </Button>
               </div>
