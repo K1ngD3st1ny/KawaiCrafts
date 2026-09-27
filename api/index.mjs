@@ -871,10 +871,11 @@ router3.get("/", async (req, res) => {
 router3.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
     const [product] = await db.select().from(products).where(
       and2(
         eq3(products.active, true),
-        or(eq3(products.id, id), eq3(products.slug, id))
+        isUuid ? or(eq3(products.id, id), eq3(products.slug, id)) : eq3(products.slug, id)
       )
     ).limit(1);
     if (!product) {
@@ -890,10 +891,11 @@ router3.get("/:id", async (req, res) => {
 router3.get("/:id/recommended", async (req, res) => {
   try {
     const { id } = req.params;
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
     const [product] = await db.select().from(products).where(
       and2(
         eq3(products.active, true),
-        or(eq3(products.id, id), eq3(products.slug, id))
+        isUuid ? or(eq3(products.id, id), eq3(products.slug, id)) : eq3(products.slug, id)
       )
     ).limit(1);
     if (!product) {
@@ -976,8 +978,16 @@ router4.post(
         featured: req.body.featured === "true" || req.body.featured === true,
         active: req.body.active === "true" || req.body.active === true
       };
+      const TITLE_SUFFIX = " \u2013 PRINTABLE PAPER 3D FIGURE";
+      if (body.title && typeof body.title === "string" && !body.title.endsWith(TITLE_SUFFIX)) {
+        body.title = `${body.title}${TITLE_SUFFIX}`;
+      }
+      if (!body.description && body.characterName && body.animeSeries) {
+        body.description = `Unleash the spirit of ${body.characterName.trim()} with this DIY papercraft! Designed with their signature look from ${body.animeSeries.trim()}, this 3D figure captures their unique energy. Just download the PDF, print it on A4 paper, cut, fold, and glue to bring ${body.characterName.trim()} to life. Perfect for display, collecting, or gifting to any ${body.animeSeries.trim()} fan!`;
+      }
       if (body.title && !body.slug) {
-        body.slug = body.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const titleForSlug = body.title.replace(TITLE_SUFFIX, "");
+        body.slug = titleForSlug.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       }
       const parsed = insertProductSchema.safeParse(body);
       if (!parsed.success) {
@@ -1050,8 +1060,16 @@ router4.put(
         body.featured = body.featured === "true" || body.featured === true;
       if (body.active !== void 0)
         body.active = body.active === "true" || body.active === true;
+      const TITLE_SUFFIX = " \u2013 PRINTABLE PAPER 3D FIGURE";
+      if (body.title && typeof body.title === "string" && !body.title.endsWith(TITLE_SUFFIX)) {
+        body.title = `${body.title}${TITLE_SUFFIX}`;
+      }
+      if (body.description !== void 0 && !body.description && body.characterName && body.animeSeries) {
+        body.description = `Unleash the spirit of ${body.characterName.trim()} with this DIY papercraft! Designed with their signature look from ${body.animeSeries.trim()}, this 3D figure captures their unique energy. Just download the PDF, print it on A4 paper, cut, fold, and glue to bring ${body.characterName.trim()} to life. Perfect for display, collecting, or gifting to any ${body.animeSeries.trim()} fan!`;
+      }
       if (body.title && !body.slug) {
-        body.slug = body.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const titleForSlug = body.title.replace(TITLE_SUFFIX, "");
+        body.slug = titleForSlug.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       }
       const parsed = updateProductSchema.safeParse(body);
       if (!parsed.success) {
